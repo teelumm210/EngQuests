@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#212121">
+  <title>EngQuests - Học tiếng Anh với AI</title>
+  <script>
+    // Áp giao diện đã lưu (hoặc theo hệ điều hành) trước khi vẽ trang để không bị nháy
+    (function () {
+      try {
+        var t = localStorage.getItem("voca_theme");
+        if (t !== "light" && t !== "dark") {
+          t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute("content", t === "light" ? "#ffffff" : "#212121");
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%234f8cff'/></svg>">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ============ Header ============ -->
+    <header class="header">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">
+          <div class="brand-logo-icon">
+            <span class="brand-logo-letter">✨</span>
+          </div>
+        </div>
+        <h1>EngQuests</h1>
+      </div>
+
+      <!-- Quick Learning Stats & Modals Trigger -->
+      <div class="header-tools">
+        <button class="tool-btn streak-badge" id="btn-streak-badge" title="Chuỗi ngày học liên tục">
+          <span class="fire-icon">🔥</span>
+          <span id="streak-count">1</span>
+          <span class="streak-glow" aria-hidden="true"></span>
+        </button>
+
+        <div id="user-level" class="user-level-badge">
+          <span id="level-badge" class="level-badge">Lv.1 🌱</span>
+        </div>
+
+        <button class="tool-btn tool-pill" id="btn-open-pronunciation" title="Luyện phát âm ngay trong khung chat">
+          <span class="material-symbols-rounded tool-icon-mat">mic</span>
+          <span class="tool-text">Luyện phát âm</span>
+        </button>
+
+        <button class="tool-btn tool-pill" id="btn-open-games" title="Chơi game học tiếng Anh">
+          <span class="material-symbols-rounded tool-icon-mat">sports_esports</span>
+          <span class="tool-text">Trò chơi</span>
+        </button>
+
+        <button class="tool-btn tool-pill" id="btn-open-notebook" title="Sổ tay từ vựng">
+          <span class="material-symbols-rounded tool-icon-mat">book_2</span>
+          <span class="tool-text">Sổ từ (<span id="notebook-count">0</span>)</span>
+        </button>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn-icon" id="btn-theme" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện sáng/tối">
+          <svg class="ico-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+          <svg class="ico-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+        <button class="btn-icon" id="btn-settings" title="Cài đặt" aria-label="Cài đặt">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+        <button class="btn-icon" id="btn-new-chat" title="Cuộc trò chuyện mới" aria-label="Cuộc trò chuyện mới">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ============ Chat ============ -->
+    <main class="chat-area" id="chat-area">
+      <section class="welcome" id="welcome">
+
+        <!-- Mascot area -->
+        <div class="welcome-mascot" aria-hidden="true">
+          <div class="mascot-body">
+            <div class="mascot-face">
+              <div class="mascot-eye mascot-eye-l"></div>
+              <div class="mascot-eye mascot-eye-r"></div>
+              <div class="mascot-beak"></div>
+            </div>
+            <div class="mascot-wing mascot-wing-l"></div>
+            <div class="mascot-wing mascot-wing-r"></div>
+          </div>
+          <div class="mascot-shadow"></div>
+        </div>
+
+        <!-- Greeting -->
+        <h2 class="welcome-greeting">Hôm nay bạn muốn luyện tiếng Anh thế nào?</h2>
+
+        <!-- XP Progress Bar -->
+        <div id="xp-bar" class="xp-bar-container">
+          <div class="xp-bar-label">
+            <span class="xp-bar-level">Cấp 1</span>
+            <span class="xp-bar-points">0 / 100 XP</span>
+          </div>
+          <div class="xp-bar-track">
+            <div class="xp-bar-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Quick stats row -->
+        <div class="welcome-stats-row">
+          <div class="welcome-stat">
+            <span class="welcome-stat-icon">🔥</span>
+            <span class="welcome-stat-value" data-stat="streak">1</span>
+            <span class="welcome-stat-label">ngày streak</span>
+          </div>
+          <div class="welcome-stat">
+            <span class="welcome-stat-icon">📚</span>
+            <span class="welcome-stat-value" data-stat="words">0</span>
+            <span class="welcome-stat-label">từ đã học</span>
+          </div>
+          <div class="welcome-stat">
+            <span class="welcome-stat-icon">⏱️</span>
+            <span class="welcome-stat-value" data-stat="minutes">0</span>
+            <span class="welcome-stat-label">phút luyện</span>
+          </div>
+        </div>
+
+        <!-- Daily Goal -->
+        <div id="daily-goal" class="daily-goal">
+          <div class="daily-goal-header">
+            <span class="material-symbols-rounded daily-goal-icon">flag</span>
+            <span class="daily-goal-title">Mục tiêu hôm nay</span>
+            <span class="daily-goal-progress-text">0 / 3 hoạt động</span>
+          </div>
+          <div class="daily-goal-track">
+            <div class="daily-goal-fill" style="width: 0%;"></div>
+            <div class="daily-goal-marker" style="left: 33%;"></div>
+            <div class="daily-goal-marker" style="left: 66%;"></div>
+          </div>
+        </div>
+
+        <!-- Action chips -->
+        <div class="chips">
+          <button class="chip chip-primary" data-action="live-call">
+            <span class="chip-icon-wrap chip-icon-gradient-voice">
+              <span class="material-symbols-rounded">call</span>
+            </span>
+            <span class="chip-label">Nói chuyện với EngQuests</span>
+          </button>
+          <button class="chip chip-feature" id="chip-pronunciation">
+            <span class="chip-icon-wrap chip-icon-gradient-mic">
+              <span class="material-symbols-rounded">mic</span>
+            </span>
+            <span class="chip-label">Luyện & chấm điểm phát âm</span>
+          </button>
+          <button class="chip chip-secondary" data-action="camera">
+            <span class="chip-icon-wrap chip-icon-gradient-cam">
+              <span class="material-symbols-rounded">photo_camera</span>
+            </span>
+            <span class="chip-label">Chỉ camera để học từ</span>
+          </button>
+          <button class="chip chip-secondary" data-action="describe">
+            <span class="chip-icon-wrap chip-icon-gradient-game">
+              <span class="material-symbols-rounded">extension</span>
+            </span>
+            <span class="chip-label">Mô tả đồ vật để đoán từ</span>
+          </button>
+          <button class="chip chip-feature" id="chip-games">
+            <span class="chip-icon-wrap chip-icon-gradient-game">
+              <span class="material-symbols-rounded">sports_esports</span>
+            </span>
+            <span class="chip-label">Chơi game học tiếng Anh</span>
+          </button>
+          <button class="chip chip-feature" id="chip-notebook">
+            <span class="chip-icon-wrap chip-icon-gradient-book">
+              <span class="material-symbols-rounded">style</span>
+            </span>
+            <span class="chip-label">Flashcard theo chủ đề</span>
+          </button>
+        </div>
+      </section>
+
+      <div id="messages"></div>
+
+      <div class="typing-indicator" id="typing-indicator" style="display: none;" aria-label="EngQuests đang trả lời">
+        <div class="typing-avatar">✨</div>
+        <span></span><span></span><span></span>
+      </div>
+    </main>
+
+    <!-- ============ Composer ============ -->
+    <footer class="input-area">
+      <div class="image-preview" id="image-preview" style="display: none;">
+        <img id="preview-img" src="" alt="Ảnh đã chụp">
+        <button class="btn-remove-image" id="btn-remove-image" title="Xóa ảnh" aria-label="Xóa ảnh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="composer">
+        <button class="btn-icon btn-camera" id="btn-camera" title="Chụp ảnh đồ vật" aria-label="Chụp ảnh đồ vật">
+          <span class="material-symbols-rounded">photo_camera</span>
+        </button>
+
+        <textarea id="message-input" placeholder="Nhắn tin cho EngQuests…" rows="1" maxlength="4000" aria-label="Tin nhắn"></textarea>
+
+        <button class="btn-icon btn-mic" id="btn-mic" title="Nói để nhập văn bản" aria-label="Nói để nhập văn bản">
+          <span class="material-symbols-rounded">mic</span>
+          <span class="mic-ripple" aria-hidden="true"></span>
+        </button>
+
+        <!-- Nút gửi (hiện khi có chữ) / nút giọng nói (khi ô trống) -->
+        <button class="btn-round btn-send" id="btn-send" title="Gửi" aria-label="Gửi tin nhắn" hidden>
+          <span class="material-symbols-rounded">arrow_upward</span>
+        </button>
+        <button class="btn-round btn-voice" id="btn-voice" title="Bắt đầu nói chuyện" aria-label="Bắt đầu nói chuyện với EngQuests">
+          <span class="material-symbols-rounded">graphic_eq</span>
+        </button>
+      </div>
+      <p class="disclaimer">EngQuests có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.</p>
+    </footer>
+
+    <!-- ============ Modals / Overlays ============ -->
+
+    <!-- Modal Cài đặt -->
+    <div class="modal-overlay" id="modal-settings" style="display: none;">
+      <div class="modal-card modal-card-modern">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-badge-icon modal-badge-settings">
+              <span class="material-symbols-rounded">settings</span>
+            </span>
+            <div>
+              <h3>Cài đặt</h3>
+              <p>Tùy chỉnh trải nghiệm của bạn</p>
+            </div>
+          </div>
+          <button class="btn-icon btn-modal-close" id="btn-close-settings" aria-label="Đóng">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="settings-body">
+          <div class="field">
+            <p class="field-hint">
+              EngQuests đã sẵn sàng dùng, không cần nhập API key. Hãy dùng nút sáng/tối trên thanh công cụ để đổi giao diện.
+              Từ vựng và tiến độ học của bạn được lưu ngay trong trình duyệt này.
+            </p>
+          </div>
+          <div class="settings-actions">
+            <button class="btn-primary" id="btn-save-settings" type="button">Đóng</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Trò chơi học tiếng Anh -->
+    <div class="modal-overlay" id="modal-games" style="display: none;">
+      <div class="modal-card games-modal-card modal-card-modern" role="dialog" aria-modal="true" aria-labelledby="games-title">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-badge-icon">🎮</span>
+            <div>
+              <h3 id="games-title">Trò chơi học tiếng Anh</h3>
+              <p>Chơi vui, nhận XP và nhớ từ lâu hơn</p>
+            </div>
+          </div>
+          <button class="btn-icon btn-modal-close" id="btn-close-games" aria-label="Đóng">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="games-body" id="games-body"></div>
+      </div>
+    </div>
+
+    <!-- 3. Modal Sổ tay từ vựng & Flashcards (Notebook) -->
+    <div class="modal-overlay" id="modal-notebook" style="display: none;">
+      <div class="modal-card notebook-modal-card modal-card-modern">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-badge-icon modal-badge-notebook">
+              <span class="material-symbols-rounded">book_2</span>
+            </span>
+            <div>
+              <h3>Flashcard của bạn</h3>
+              <p>Từ mới được EngQuests phân loại theo chủ đề để dễ ôn tập</p>
+            </div>
+          </div>
+          <button class="btn-icon btn-modal-close" id="btn-close-notebook">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="notebook-tabs">
+          <button class="nb-tab active" id="tab-word-list">
+            <span class="material-symbols-rounded">list_alt</span>
+            Danh sách từ
+          </button>
+          <button class="nb-tab" id="tab-flashcards">
+            <span class="material-symbols-rounded">style</span>
+            Luyện thẻ Flashcards
+          </button>
+        </div>
+        <!-- Tab 1: Danh sách từ -->
+        <div class="notebook-content" id="view-word-list">
+          <div class="topic-filter" id="topic-filter" role="tablist" aria-label="Lọc theo chủ đề"></div>
+          <div class="word-list" id="word-list-container"></div>
+        </div>
+        <!-- Tab 2: Flashcards -->
+        <div class="notebook-content" id="view-flashcards" style="display: none;">
+          <div class="flashcard-container" id="flashcard-container">
+            <div class="fc-deck">
+              <label for="fc-topic-select">Bộ thẻ</label>
+              <select id="fc-topic-select"></select>
+            </div>
+            <div class="flashcard" id="active-flashcard">
+              <div class="fc-front">
+                <span class="fc-hint">Nhấp vào thẻ để lật mặt sau</span>
+                <h2 id="fc-word">Apple</h2>
+                <p id="fc-ipa">/ˈæp.əl/</p>
+                <div class="fc-actions">
+                  <button class="btn-fc-sound" id="btn-fc-sound" title="Nghe phát âm">
+                    <span class="material-symbols-rounded">volume_up</span> Nghe
+                  </button>
+                  <button class="btn-fc-sound" id="btn-fc-practice" title="Luyện đọc và chấm điểm trong chat">
+                    <span class="material-symbols-rounded">mic</span> Luyện đọc
+                  </button>
+                </div>
+              </div>
+              <div class="fc-back">
+                <span class="fc-hint">Nghĩa tiếng Việt & ví dụ</span>
+                <h3 id="fc-meaning">Quả táo</h3>
+                <p class="fc-example" id="fc-example">"An apple a day keeps the doctor away."</p>
+              </div>
+            </div>
+            <div class="flashcard-controls">
+              <button class="btn-fc-nav" id="btn-fc-prev">
+                <span class="material-symbols-rounded">arrow_back</span> Từ trước
+              </button>
+              <span class="fc-counter" id="fc-counter">1 / 1</span>
+              <button class="btn-fc-nav" id="btn-fc-next">
+                Từ tiếp theo <span class="material-symbols-rounded">arrow_forward</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Modal Thống kê Streak & Thời gian nói -->
+    <div class="modal-overlay" id="modal-stats" style="display: none;">
+      <div class="modal-card stats-modal-card modal-card-modern">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-badge-icon modal-badge-stats">
+              <span class="material-symbols-rounded">bar_chart</span>
+            </span>
+            <div>
+              <h3>Tiến độ học tiếng Anh</h3>
+              <p>Mỗi phút luyện tập cùng EngQuests đưa bạn tới gần sự lưu loát</p>
+            </div>
+          </div>
+          <button class="btn-icon btn-modal-close" id="btn-close-stats">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+
+        <!-- Stats grid with CSS bar charts -->
+        <div class="stats-grid">
+          <div class="stat-box stat-box-featured">
+            <div class="stat-box-header">
+              <span class="stat-emoji">🔥</span>
+              <strong id="stat-streak-val">1</strong>
+            </div>
+            <span class="stat-box-label">Ngày học liên tiếp</span>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill stat-bar-streak" style="width: 14%;"></div>
+            </div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-header">
+              <span class="stat-emoji">⏱️</span>
+              <strong id="stat-time-val">0</strong>
+            </div>
+            <span class="stat-box-label">Phút đàm thoại cùng EngQuests</span>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill stat-bar-time" style="width: 0%;"></div>
+            </div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-header">
+              <span class="stat-emoji">📚</span>
+              <strong id="stat-words-val">0</strong>
+            </div>
+            <span class="stat-box-label">Từ trong flashcard</span>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill stat-bar-words" style="width: 0%;"></div>
+            </div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-header">
+              <span class="stat-emoji">🎙️</span>
+              <strong id="stat-pron-count-val">0</strong>
+            </div>
+            <span class="stat-box-label">Lượt luyện phát âm</span>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill stat-bar-pron" style="width: 0%;"></div>
+            </div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-header">
+              <span class="stat-emoji">⭐</span>
+              <strong id="stat-pron-avg-val">–</strong>
+            </div>
+            <span class="stat-box-label">Điểm phát âm trung bình</span>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill stat-bar-avg" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly chart (CSS-only bar chart) -->
+        <div class="stats-chart">
+          <h4 class="stats-chart-title">Hoạt động 7 ngày qua</h4>
+          <div class="stats-chart-bars">
+            <div class="stats-chart-col">
+              <div class="stats-chart-bar" style="height: 20%;"></div>
+              <span>T2</span>
+            </div>
+            <div class="stats-chart-col">
+              <div class="stats-chart-bar" style="height: 45%;"></div>
+              <span>T3</span>
+            </div>
+            <div class="stats-chart-col">
+              <div class="stats-chart-bar" style="height: 30%;"></div>
+              <span>T4</span>
+            </div>
+            <div class="stats-chart-col">
+              <div class="stats-chart-bar" style="height: 60%;"></div>
+              <span>T5</span>
+            </div>
+            <div class="stats-chart-col">
+              <div class="stats-chart-bar" style="height: 80%;"></div>
+              <span>T6</span>
+            </div>
+            <div class="stats-chart-col">
+              <div class="stats-chart-bar" style="height: 50%;"></div>
+              <span>T7</span>
+            </div>
+            <div class="stats-chart-col stats-chart-col-today">
+              <div class="stats-chart-bar stats-chart-bar-today" style="height: 35%;"></div>
+              <span>CN</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-quote">
+          <span class="material-symbols-rounded stats-quote-icon">format_quote</span>
+          "Practice makes progress, not perfection. Tiếp tục phát huy nhé!"
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Voice mode (toàn màn hình) ============ -->
+    <div class="voice-view" id="voice-view" data-state="connecting" aria-hidden="true">
+      <div class="voice-bg" aria-hidden="true"></div>
+
+      <!-- Voice top status bar -->
+      <div class="voice-top">
+        <span class="voice-name">EngQuests</span>
+        <div class="voice-top-right">
+          <div class="voice-timer" aria-label="Thời gian cuộc gọi">
+            <span class="material-symbols-rounded">timer</span>
+            <span class="voice-timer-value" id="voice-timer-value">00:00</span>
+          </div>
+          <button class="voice-new-words-count" id="btn-toggle-vocab-panel" aria-label="Từ mới phát hiện" title="Xem danh sách từ mới">
+            <span class="material-symbols-rounded">translate</span>
+            <span class="voice-new-words-value" id="voice-new-words-value">0 từ mới</span>
+          </button>
+          <button class="vflip" id="btn-live-flip" title="Đổi camera trước/sau" aria-label="Đổi camera trước/sau" hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+          <div class="live-pill" id="live-pill"><span></span>Trực tiếp</div>
+        </div>
+      </div>
+
+      <!-- Camera toàn màn hình (khi bật camera trong cuộc gọi) -->
+      <div class="live-camera-pip" id="live-camera-pip" style="display: none;">
+        <video id="pip-video" autoplay playsinline muted></video>
+      </div>
+
+      <div class="voice-stage">
+        <div class="orb" id="orb" role="img" aria-label="Quả cầu giọng nói của EngQuests">
+          <div class="orb-glow"></div>
+          <div class="orb-body">
+            <i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i>
+            <i class="orb-shine"></i>
+          </div>
+        </div>
+        <p class="voice-status" id="voice-status" aria-live="polite">Đang kết nối…</p>
+      </div>
+
+      <!-- Floating Vocab Card (Hiển thị ngay khi AI phát hiện từ mới) -->
+      <div id="voice-vocab-card" class="voice-vocab-card" style="display: none;">
+        <div class="vvc-glow"></div>
+        <button class="vvc-close" id="btn-close-vvc" title="Bỏ qua">✕</button>
+        <div class="vvc-badge"><span class="vvc-sparkle">✨</span> Từ vựng mới phát hiện</div>
+        <div class="vvc-word-row">
+          <h3 class="vvc-word" id="vvc-word">resilient</h3>
+          <span class="vvc-ipa" id="vvc-ipa">/rɪˈzɪl.i.ənt/</span>
+          <button class="vvc-speak" id="btn-vvc-speak" title="Nghe phát âm">🔊</button>
+        </div>
+        <p class="vvc-meaning" id="vvc-meaning">kiên cường, mau hồi phục</p>
+        <p class="vvc-example" id="vvc-example">"Stay resilient and keep practicing!"</p>
+        <div class="vvc-actions">
+          <button class="vvc-btn-save" id="btn-vvc-save">
+            <span class="vvc-btn-icon">➕</span>
+            <span class="vvc-btn-text">Thêm vào Flashcard</span>
+          </button>
+          <span class="vvc-voice-hint">🎙️ Nói <b>"Lưu đi"</b> hoặc <b>"Có"</b></span>
+        </div>
+      </div>
+
+      <!-- Live Pronunciation Score Overlay (Chấm điểm phát âm hoạt ảnh sinh động) -->
+      <div id="voice-score-overlay" class="voice-score-overlay" style="display: none;">
+        <div class="vso-card">
+          <div class="vso-badge">🎙️ Điểm phát âm</div>
+          <div class="vso-ring-container">
+            <svg class="vso-ring-svg" viewBox="0 0 120 120">
+              <circle class="vso-ring-bg" cx="60" cy="60" r="50"></circle>
+              <circle class="vso-ring-bar" id="vso-ring-bar" cx="60" cy="60" r="50"></circle>
+            </svg>
+            <div class="vso-score-number" id="vso-score-num">95</div>
+          </div>
+          <div class="vso-stars" id="vso-stars">⭐⭐⭐</div>
+          <h4 class="vso-title" id="vso-title">Xuất sắc! 🎉</h4>
+          <p class="vso-target-word" id="vso-target-word">"resilient"</p>
+          <p class="vso-feedback" id="vso-feedback">Phát âm rất mượt và chuẩn xác!</p>
+          <div class="vso-xp-tag" id="vso-xp-tag">+25 XP</div>
+        </div>
+      </div>
+
+      <!-- Voice vocab detection panel drawer -->
+      <div id="voice-vocab-panel" class="voice-vocab-panel">
+        <div class="voice-vocab-panel-header">
+          <div class="vvp-title">
+            <span class="material-symbols-rounded">translate</span>
+            <span>Từ vựng trong cuộc gọi</span>
+          </div>
+          <button class="btn-icon vvp-close" id="btn-close-vocab-panel">✕</button>
+        </div>
+        <div class="voice-vocab-panel-list" id="voice-vocab-panel-list">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+
+      <!-- Waveform / equalizer area -->
+      <div class="voice-waveform" aria-hidden="true">
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+        <span class="waveform-bar"></span>
+      </div>
+
+      <div class="voice-captions" id="voice-captions" aria-live="polite">
+        <p class="cap cap-user" id="cap-user"></p>
+        <p class="cap cap-ai" id="cap-ai"></p>
+      </div>
+
+      <div class="voice-controls">
+        <button class="vbtn" id="btn-live-cam" title="Bật camera" aria-label="Bật camera" aria-pressed="false">
+          <svg class="ico-on" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <svg class="ico-off" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+
+        <button class="vbtn" id="btn-live-mute" title="Tắt mic" aria-label="Tắt mic" aria-pressed="false">
+          <svg class="ico-on" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+          <svg class="ico-off" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        </button>
+
+        <button class="vbtn" id="btn-live-cc" title="Bật/tắt phụ đề" aria-label="Bật/tắt phụ đề" aria-pressed="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 10.2a2 2 0 1 0 0 3.6M17 10.2a2 2 0 1 0 0 3.6"/></svg>
+        </button>
+
+        <button class="vbtn vbtn-end" id="btn-end-call" title="Kết thúc" aria-label="Kết thúc cuộc gọi">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ============ Camera chụp ảnh (toàn màn hình) ============ -->
+    <div class="camera-overlay" id="camera-overlay" style="display: none;">
+      <div class="camera-header">
+        <h3>Hướng camera vào đồ vật</h3>
+        <button class="btn-icon btn-close-camera" id="btn-close-camera" aria-label="Đóng camera">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="camera-body">
+        <video id="camera-video" autoplay playsinline muted></video>
+        <canvas id="camera-canvas" style="display: none;"></canvas>
+        <div class="camera-crosshair">
+          <div class="crosshair-corner tl"></div><div class="crosshair-corner tr"></div>
+          <div class="crosshair-corner bl"></div><div class="crosshair-corner br"></div>
+        </div>
+        <div class="camera-hint">Đặt đồ vật vào trong khung</div>
+      </div>
+      <div class="camera-controls">
+        <button class="btn-switch-camera" id="btn-switch-camera" title="Đổi camera" aria-label="Đổi camera">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+        <button class="btn-capture" id="btn-capture" title="Chụp" aria-label="Chụp ảnh"><div class="capture-ring"></div></button>
+        <div class="camera-spacer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Celebration / confetti container -->
+  <div id="celebration-container" class="celebration-container" aria-hidden="true"></div>
+
+  <div id="toast-container" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

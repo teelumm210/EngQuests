@@ -1,0 +1,17 @@
+{
+  "name": "engquests",
+  "version": "1.1.0",
+  "description": "EngQuests - trợ lý học tiếng Anh với AI: chat, giọng nói và camera",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npx netlify-cli dev",
+    "build": "echo 'No build step needed'"
+  },
+  "dependencies": {
+    "@google/genai": "^2.29.1"
+  }
+}
