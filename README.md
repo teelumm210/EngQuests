@@ -50,7 +50,11 @@ Nút **Trò chơi** trên thanh công cụ (hoặc chip "Chơi game học tiến
 - 🔤 **Đoán chữ**: đoán từ tiếng Anh từ nghĩa tiếng Việt.
 - 🧩 **Xếp câu**: sắp xếp từ thành câu đúng.
 
-Mã nguồn: `public/js/games.js` (logic), `public/js/games-data.js` (kho từ, câu hỏi ngữ pháp, câu mẫu). Từ trong sổ từ của người dùng được trộn vào các game từ vựng.
+- 🦖 **Khủng long gõ/đọc từ**: hoàn thành từ thì khủng long tự nhảy khi tới gần xương rồng.
+- ✈️ **Máy bay bắn chim**: di chuyển máy bay (kéo màn hình, nút ◀ ▶ hoặc phím mũi tên), gõ từ để bắn đạn thẳng lên; cứ 5 từ có một vật phẩm; càng chơi lâu chim càng đông, nhanh và có loại khó hạ.
+- 🐟 **Bắn cá**: chọn 1/2/3 phút, gõ từ trên cá để pháo bắn; cá nhỏ/vừa/lớn, cá vàng, cá nóc, boss; đạn có hạn; bong bóng vật phẩm.
+
+Mã nguồn: `public/js/games.js` (logic), `public/js/games-arcade.js` (khủng long, máy bay), `public/js/games-fish.js` (bắn cá), `public/js/games-data.js` (kho từ, câu hỏi ngữ pháp, câu mẫu). Từ trong sổ từ của người dùng được trộn vào các game từ vựng.
 
 ## Chạy trên cả Netlify và GitHub Pages
 

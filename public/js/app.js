@@ -233,7 +233,7 @@ function playScoreFanfare(score) {
 function triggerConfetti() {
   const container = document.getElementById("celebration-container");
   if (!container) return;
-  const colors = ["#58CC02", "#1CB0F6", "#FF9600", "#FF4B4B", "#CE82FF", "#FFD700", "#00F5D4"];
+  const colors = ["#3b82f6", "#38bdf8", "#60a5fa", "#2563eb", "#f59e0b", "#e2e8f0", "#22d3ee"];
   const count = 35;
   for (let i = 0; i < count; i++) {
     const p = document.createElement("div");
@@ -828,7 +828,7 @@ function confirmAddLiveVocab(args = null, { notifyAi = true } = {}) {
   triggerFloatingXP(15, btnVvcSave || voiceVocabCard);
   updateBadgeUI();
 
-  showToast(`✨ Đã thêm "${currentLiveVocab.word}" vào Flashcard!`, "success");
+  showToast(`Đã thêm "${currentLiveVocab.word}" vào Flashcard!`, "success");
 
   // Báo cho AI biết người dùng đã đồng ý lưu từ để AI tiếp tục cuộc trò chuyện
   if (notifyAi && state.liveClient && state.liveClient.isConnected) {
@@ -927,11 +927,11 @@ function showLivePronunciationScore(score, targetWord = "", feedback = "", sourc
     vsoRingBar.style.strokeDasharray = `${circumference}`;
     vsoRingBar.style.strokeDashoffset = `${offset}`;
     if (validScore >= 85) {
-      vsoRingBar.style.stroke = "#58CC02";
+      vsoRingBar.style.stroke = "#3b82f6";
     } else if (validScore >= 65) {
-      vsoRingBar.style.stroke = "#FF9600";
+      vsoRingBar.style.stroke = "#f59e0b";
     } else {
-      vsoRingBar.style.stroke = "#FF4B4B";
+      vsoRingBar.style.stroke = "#ef4444";
     }
   }
 
@@ -940,7 +940,7 @@ function showLivePronunciationScore(score, targetWord = "", feedback = "", sourc
   let title = "Cần cố gắng thêm nhé! 🌱";
   if (validScore >= 90) {
     stars = "⭐⭐⭐";
-    title = "Xuất sắc! 🎉";
+    title = "Xuất sắc!";
   } else if (validScore >= 75) {
     stars = "⭐⭐";
     title = "Rất tốt! 👍";

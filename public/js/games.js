@@ -7,6 +7,7 @@
 //  4. Đoán chữ       (kiểu Hangman)        - đoán từ qua nghĩa tiếng Việt
 //  5. Xếp câu        (kiểu Duolingo)       - sắp xếp từ thành câu đúng
 //  6-8. Khủng long gõ từ, Khủng long đọc từ, Máy bay bắn chim -> xem games-arcade.js
+//  9.   Bắn cá (đại dương, gõ từ trên cá, 1/2/3 phút)             -> xem games-fish.js
 //
 // Chạy hoàn toàn trên trình duyệt, không dùng thư viện ngoài.
 // Điểm kinh nghiệm (XP) cộng vào LearningStore giống các hoạt động khác.
@@ -16,6 +17,7 @@ import { LearningStore } from "./store.js";
 import { normalizeTopic } from "./features.js";
 import { WORDS, GRAMMAR, SENTENCES } from "./games-data.js";
 import { startDinoType, startDinoSpeak, startPlaneShooter } from "./games-arcade.js";
+import { startFishShooter } from "./games-fish.js";
 
 const BEST_KEY = "engquests_game_best";
 
@@ -820,7 +822,8 @@ export function createGames({ body, speak, toast, celebrate, onXP }) {
     { id: "builder", emoji: "🧩", name: "Xếp câu", desc: "Sắp xếp các từ thành câu tiếng Anh đúng.", skill: "Ngữ pháp · Trật tự từ", start: startBuilder },
     { id: "dino-type", emoji: "🦖", name: "Khủng long gõ từ", desc: "Gõ đúng từ trên xương rồng để khủng long nhảy qua.", skill: "Từ vựng · Gõ nhanh", start: startDinoType },
     { id: "dino-speak", emoji: "🎙️", name: "Khủng long đọc từ", desc: "Đọc đúng từ trên xương rồng để khủng long nhảy qua.", skill: "Từ vựng · Phát âm", start: startDinoSpeak },
-    { id: "plane", emoji: "✈️", name: "Máy bay bắn chim", desc: "Gõ lại từ cho sẵn, chọn nghĩa tiếng Việt để bắn chim.", skill: "Từ vựng · Chính tả · Nghĩa", start: startPlaneShooter },
+    { id: "plane", emoji: "✈️", name: "Máy bay bắn chim", desc: "Lái máy bay, gõ từ để bắn đàn chim, né chim lao xuống, nhặt vật phẩm.", skill: "Từ vựng · Gõ nhanh · Phản xạ", start: startPlaneShooter },
+    { id: "fish", emoji: "🐟", name: "Bắn cá", desc: "Gõ từ trên con cá để bắn. Chọn 1, 2 hoặc 3 phút, săn cá lớn và boss.", skill: "Từ vựng · Gõ nhanh · Chiến thuật", start: startFishShooter },
   ];
 
   return { showHub, stop: cleanup, startGame };

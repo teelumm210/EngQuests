@@ -7,7 +7,7 @@ const KEYS = {
   THEME: "voca_theme",
 };
 
-const THEME_COLORS = { light: "#ffffff", dark: "#212121" };
+const THEME_COLORS = { light: "#f2f5fb", dark: "#0a1020" };
 
 function read(key) {
   try {
