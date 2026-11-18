@@ -6,6 +6,7 @@
 //  3. Ngữ pháp nhanh (kiểu Quiz Blitz)     - điền khuyết, 3 mạng, tính giờ, combo
 //  4. Đoán chữ       (kiểu Hangman)        - đoán từ qua nghĩa tiếng Việt
 //  5. Xếp câu        (kiểu Duolingo)       - sắp xếp từ thành câu đúng
+//  6-8. Khủng long gõ từ, Khủng long đọc từ, Máy bay bắn chim -> xem games-arcade.js
 //
 // Chạy hoàn toàn trên trình duyệt, không dùng thư viện ngoài.
 // Điểm kinh nghiệm (XP) cộng vào LearningStore giống các hoạt động khác.
@@ -14,6 +15,7 @@
 import { LearningStore } from "./store.js";
 import { normalizeTopic } from "./features.js";
 import { WORDS, GRAMMAR, SENTENCES } from "./games-data.js";
+import { startDinoType, startDinoSpeak, startPlaneShooter } from "./games-arcade.js";
 
 const BEST_KEY = "engquests_game_best";
 
@@ -816,6 +818,9 @@ export function createGames({ body, speak, toast, celebrate, onXP }) {
     { id: "grammar", emoji: "⚡", name: "Ngữ pháp nhanh", desc: "Điền khuyết có tính giờ, combo và 3 mạng.", skill: "Ngữ pháp", start: startGrammar },
     { id: "hangman", emoji: "🔤", name: "Đoán chữ", desc: "Đoán từ tiếng Anh từ nghĩa tiếng Việt.", skill: "Từ vựng · Chính tả", start: startHangman },
     { id: "builder", emoji: "🧩", name: "Xếp câu", desc: "Sắp xếp các từ thành câu tiếng Anh đúng.", skill: "Ngữ pháp · Trật tự từ", start: startBuilder },
+    { id: "dino-type", emoji: "🦖", name: "Khủng long gõ từ", desc: "Gõ đúng từ trên xương rồng để khủng long nhảy qua.", skill: "Từ vựng · Gõ nhanh", start: startDinoType },
+    { id: "dino-speak", emoji: "🎙️", name: "Khủng long đọc từ", desc: "Đọc đúng từ trên xương rồng để khủng long nhảy qua.", skill: "Từ vựng · Phát âm", start: startDinoSpeak },
+    { id: "plane", emoji: "✈️", name: "Máy bay bắn chim", desc: "Gõ lại từ cho sẵn, chọn nghĩa tiếng Việt để bắn chim.", skill: "Từ vựng · Chính tả · Nghĩa", start: startPlaneShooter },
   ];
 
   return { showHub, stop: cleanup, startGame };
