@@ -7,16 +7,12 @@
 // ============================================================
 import { originAllowed, withCors, preflight, forbidden } from "../lib/cors.mjs";
 import { TOPIC_IDS } from "../../public/js/features.js";
+import { generate, textOf } from "../lib/gemini.mjs";
 
-const PRIMARY_MODEL = process.env.CHAT_MODEL || "gemini-3.8-flash";
-const FALLBACK_MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"];
-const MODELS = [...new Set([PRIMARY_MODEL, ...FALLBACK_MODELS])];
-const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const MAX_OUTPUT_TOKENS = 3000;
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGE_B64_CHARS = 4_000_000;
 const TOTAL_BUDGET_MS = 23_000;
-const MIN_ATTEMPT_MS = 4_000;
 
 const json = (status, body) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -93,54 +89,21 @@ function cleanWord(o, fallbackTopic = "Khác") {
 }
 
 async function callGemini(apiKey, image, prompt) {
-  const payload = JSON.stringify({
-    contents: [{ role: "user", parts: [{ inlineData: image }, { text: prompt }] }],
-    generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.3, responseMimeType: "application/json" },
+  const r = await generate({
+    apiKey,
+    budgetMs: TOTAL_BUDGET_MS,
+    body: {
+      contents: [{ role: "user", parts: [{ inlineData: image }, { text: prompt }] }],
+      generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS, temperature: 0.3, responseMimeType: "application/json" },
+    },
   });
-  const startedAt = Date.now();
-  let lastErr = fail(502, "UPSTREAM", "Máy chủ AI đang gặp sự cố. Bạn thử lại sau ít giây nhé.");
-
-  for (let i = 0; i < MODELS.length; i++) {
-    const remaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
-    if (remaining < MIN_ATTEMPT_MS) break;
-    const slice = i === MODELS.length - 1 ? remaining : Math.max(MIN_ATTEMPT_MS, Math.round(remaining * 0.55));
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), slice);
-    let res;
-    try {
-      res = await fetch(`${API_BASE}/${encodeURIComponent(MODELS[i])}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        signal: ctrl.signal,
-        body: payload,
-      });
-    } catch (e) {
-      lastErr = e?.name === "AbortError"
-        ? fail(504, "TIMEOUT", "AI phản hồi quá lâu. Bạn thử lại nhé.")
-        : fail(502, "UPSTREAM", "Không kết nối được tới máy chủ AI.");
-      continue;
-    } finally {
-      clearTimeout(timer);
-    }
-    if (res.ok) {
-      const data = await res.json();
-      const cand = data.candidates?.[0];
-      const text = (cand?.content?.parts || []).filter((p) => typeof p.text === "string" && !p.thought).map((p) => p.text).join("");
-      if (!text.trim()) {
-        lastErr = fail(502, "EMPTY", data.promptFeedback?.blockReason ? "Ảnh bị bộ lọc an toàn chặn. Bạn thử ảnh khác nhé." : "AI không đọc được ảnh này. Bạn thử chụp lại nhé.");
-        continue;
-      }
-      const parsed = parseJson(text);
-      if (parsed) return { parsed };
-      lastErr = fail(502, "BAD_JSON", "AI trả kết quả không đọc được. Bạn thử chụp lại nhé.");
-      continue;
-    }
-    const s = res.status;
-    console.error("vision gemini error", MODELS[i], s);
-    if (s === 400 || s === 401 || s === 403) return { error: fail(500, "SERVER_CONFIG", "Cấu hình AI trên máy chủ chưa đúng.") };
-    lastErr = s === 429 ? fail(429, "QUOTA", "EngQuests đang quá tải lượt dùng. Bạn đợi một lát rồi thử lại nhé.") : fail(502, "UPSTREAM", "Máy chủ AI đang bận. Bạn thử lại sau ít giây nhé.");
+  if (r.error) return { error: fail(r.error.status === 400 ? 500 : r.error.status, r.error.code, r.error.message) };
+  const text = textOf(r.data);
+  if (!text.trim()) {
+    return { error: fail(502, "EMPTY", r.data.promptFeedback?.blockReason ? "Ảnh bị bộ lọc an toàn chặn. Bạn thử ảnh khác nhé." : "AI không đọc được ảnh này. Bạn thử chụp lại nhé.") };
   }
-  return { error: lastErr };
+  const parsed = parseJson(text);
+  return parsed ? { parsed } : { error: fail(502, "BAD_JSON", "AI trả kết quả không đọc được. Bạn thử chụp lại nhé.") };
 }
 
 async function handle(req) {

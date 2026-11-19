@@ -328,13 +328,15 @@ function startDino(api, mode) {
     micBtn.textContent = "Đang nghe…";
     heardEl.textContent = "";
     try {
-      const alts = await listener.listen({ onInterim: (t) => (heardEl.textContent = t) });
+      const matches = (text) => {
+        const tokens = norm(text).split(" ").filter(Boolean);
+        return tokens.some((tk) => tk === want || (want.length >= 5 && distance(tk, want) <= 1));
+      };
+      // earlyMatch: khớp ngay trên kết quả tạm thì nhảy luôn, không chờ trình duyệt tự cắt giọng
+      const alts = await listener.listen({ onInterim: (t) => (heardEl.textContent = t), earlyMatch: matches });
       if (over || target !== cactus) return;
       if (!isIOS) autoListen = true;
-      const ok = alts.some((a) => {
-        const tokens = norm(a.text).split(" ").filter(Boolean);
-        return tokens.some((tk) => tk === want || (want.length >= 5 && distance(tk, want) <= 1));
-      });
+      const ok = alts.some((a) => matches(a.text));
       if (ok) {
         heardEl.textContent = "";
         arm();
@@ -360,7 +362,7 @@ function startDino(api, mode) {
       micBtn.classList.remove("is-live");
       micBtn.textContent = "Nhấn để đọc";
       // đang tự nghe: nghe lại ngay nếu chưa đọc đúng, không cần bấm
-      if (autoListen && retry && !over && cactus && !cactus.armed) setTimeout(() => listenOnce(true), 300);
+      if (autoListen && retry && !over && cactus && !cactus.armed) setTimeout(() => listenOnce(true), 80);
     }
   }
 
@@ -588,7 +590,7 @@ function startShooter(api) {
   const MAX_LIVES = 5;
 
   area.innerHTML = `
-    <p class="gm-hint">Gõ từ ở dưới để <b>bắn đạn thẳng lên</b>. Hãy <b>di chuyển máy bay</b> (kéo trên màn hình, nút ◀ ▶ hoặc phím mũi tên) để căn hướng bắn và né chim lao xuống. Cứ <b>${ITEM_EVERY} chữ</b> sẽ rơi ra một vật phẩm hỗ trợ.</p>
+    <p class="gm-hint">Gõ đúng từ ở dưới để bắn <b>loạt đạn tự dẫn hạ cả đàn chim</b> đang hiện trên màn hình. Hãy <b>di chuyển máy bay</b> (kéo trên màn hình, nút ◀ ▶ hoặc phím mũi tên) để né chim lao xuống. Cứ <b>${ITEM_EVERY} chữ</b> sẽ rơi ra một vật phẩm hỗ trợ.</p>
     <div class="gx-stage gx-portrait"></div>
     <div class="gx-panel">
       <div class="gx-target">
@@ -670,14 +672,28 @@ function startShooter(api) {
   }
 
   // ---------- Bắn ----------
+  // Mỗi từ gõ đúng bắn một LOẠT đạn tự dẫn: mỗi con chim đang hiện trên màn hình nhận đủ số viên để bị hạ,
+  // nên một từ là hạ cả đàn. Chưa có chim nào thì bắn một viên thẳng lên như cũ.
+  const HOMING_SPEED = 820;
   function fire() {
     const dmg = powerT > 0 ? 2 : 1;
     const y = PLANE_Y - 22;
-    bullets.push({ x: plane.x, y, py: y, vx: 0, dmg });
-    if (spreadT > 0) {
-      bullets.push({ x: plane.x - 10, y, py: y, vx: -130, dmg });
-      bullets.push({ x: plane.x + 10, y, py: y, vx: 130, dmg });
+    const targets = birds
+      .filter((b) => b.hp > 0 && b.y > 0 && b.y < PLANE_Y - 8)
+      .sort((a, b) => Math.abs(a.x - plane.x) - Math.abs(b.x - plane.x));
+    if (!targets.length) {
+      bullets.push({ x: plane.x, y, py: y, vx: 0, dmg });
+      return;
     }
+    const gap = spreadT > 0 ? 0.012 : 0.04; // vật phẩm "bắn dồn dập" xả đạn nhanh hơn
+    let shot = 0;
+    targets.slice(0, 18).forEach((bird) => {
+      const need = Math.ceil(bird.hp / dmg);
+      for (let k = 0; k < need; k++) {
+        bullets.push({ x: plane.x, y, py: y, vx: 0, dmg, homing: bird, wait: Math.min(0.7, shot * gap) });
+        shot++;
+      }
+    });
   }
 
   function dropItem() {
@@ -687,7 +703,7 @@ function startShooter(api) {
   }
 
   const ITEM_INFO = {
-    spread: { label: "Đạn tỏa 3 hướng", glyph: "≋", color: "#38bdf8" },
+    spread: { label: "Bắn dồn dập", glyph: "≋", color: "#38bdf8" },
     power: { label: "Đạn mạnh x2", glyph: "×2", color: "#f59e0b" },
     shield: { label: "Khiên chắn", glyph: "◎", color: "#60a5fa" },
     bomb: { label: "Bom quét sạch", glyph: "✸", color: "#ef4444" },
@@ -948,11 +964,57 @@ function startShooter(api) {
 
     // đạn
     for (const b of bullets) {
+      if (b.homing) {
+        if (b.wait > 0) {
+          // đang chờ tới lượt bắn: nằm ở đầu máy bay
+          b.wait -= dt;
+          b.x = plane.x;
+          b.y = b.py = PLANE_Y - 22;
+          continue;
+        }
+        // mục tiêu đã chết (do viên khác hoặc va chạm): chuyển sang con chim gần nhất còn sống
+        if (!b.homing || b.homing.hp <= 0 || !birds.includes(b.homing)) {
+          let best = null;
+          let bd = Infinity;
+          for (const c of birds) {
+            if (c.hp <= 0 || c.y < 0) continue;
+            const d = Math.hypot(c.x - b.x, c.y - b.y);
+            if (d < bd) {
+              bd = d;
+              best = c;
+            }
+          }
+          b.homing = best;
+        }
+        b.py = b.y;
+        if (b.homing) {
+          const dx = b.homing.x - b.x;
+          const dy = b.homing.y - b.y;
+          const d = Math.hypot(dx, dy) || 1;
+          const step = Math.min(d, HOMING_SPEED * dt);
+          b.x += (dx / d) * step;
+          b.y += (dy / d) * step;
+        } else {
+          b.y -= 560 * dt; // hết chim: bay thẳng lên
+        }
+        continue;
+      }
       b.py = b.y;
       b.y -= 560 * dt;
       b.x += b.vx * dt;
     }
     for (const b of bullets) {
+      if (b.homing) {
+        if (b.wait > 0 || b.dead) continue;
+        const bird = b.homing;
+        if (bird && bird.hp > 0 && Math.hypot(b.x - bird.x, b.y - bird.y) < bird.r + 7) {
+          bird.hp -= b.dmg;
+          b.dead = true;
+          if (bird.hp <= 0) killBird(bird);
+          else burst(b.x, b.y, "#ffffff");
+        }
+        continue;
+      }
       for (const bird of birds) {
         if (bird.hp <= 0) continue;
         const hitX = Math.abs(b.x - bird.x) < bird.r + 3;
@@ -966,7 +1028,7 @@ function startShooter(api) {
         }
       }
     }
-    bullets = bullets.filter((b) => !b.dead && b.y > -20 && b.x > -20 && b.x < W + 20);
+    bullets = bullets.filter((b) => !b.dead && b.y > -20 && b.x > -20 && b.x < W + 20 && b.y < H + 20);
 
     // chim
     for (const bird of birds) {
@@ -1174,7 +1236,10 @@ function startShooter(api) {
     drawPlane();
 
     ctx.fillStyle = powerT > 0 ? "#fbbf24" : "#e2e8f0";
-    for (const b of bullets) roundRect(ctx, b.x - 2, b.y - 8, 4, 14, 2), ctx.fill();
+    for (const b of bullets) {
+      if (b.wait > 0) continue; // chưa tới lượt bắn
+      roundRect(ctx, b.x - 2, b.y - 8, 4, 14, 2), ctx.fill();
+    }
 
     for (const p of particles) {
       ctx.globalAlpha = Math.max(0, p.life / 0.55);

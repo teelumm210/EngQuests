@@ -332,11 +332,12 @@ export function createGames({ body, speak, toast, celebrate, onXP }) {
   //  GAME 2: Mưa chữ
   // ============================================================
   function startRain({ area, setStats, finish, pool, say }) {
-    const TOTAL = 12;
+    const TOTAL = 15; // nhiều vòng hơn, tốc độ tăng nhanh hơn
     area.innerHTML = `
-      <div class="gm-prompt">Bắt từ có nghĩa: <b class="rn-target"></b></div>
+      <div class="gm-prompt"><span class="rn-label">Bắt từ có nghĩa:</span> <b class="rn-target"></b></div>
       <div class="gm-rain" aria-live="polite"></div>`;
     const promptEl = area.querySelector(".rn-target");
+    const labelEl = area.querySelector(".rn-label");
     const field = area.querySelector(".gm-rain");
 
     let lives = 3;
@@ -351,6 +352,7 @@ export function createGames({ body, speak, toast, celebrate, onXP }) {
     let last = 0;
     let busy = false;
     let ended = false;
+    let reverse = false;
     const timers = [];
 
     const render = () => setStats(`<span>${hearts(lives)}</span><span>⭐ ${score}</span><span>${Math.min(round, TOTAL)}/${TOTAL}</span>`);
@@ -379,24 +381,34 @@ export function createGames({ body, speak, toast, celebrate, onXP }) {
       if (lives <= 0 || round >= TOTAL) return end();
       round++;
       target = pool[Math.floor(Math.random() * pool.length)];
-      promptEl.textContent = target.vi;
-      const distractors = pick(
-        pool.filter((w) => w.en !== target.en),
-        3
-      );
+      // Từ vòng 6: các vòng chẵn đảo chiều, cho từ tiếng Anh và phải bắt nghĩa tiếng Việt
+      reverse = round >= 6 && round % 2 === 0;
+      labelEl.textContent = reverse ? "Bắt nghĩa của từ:" : "Bắt từ có nghĩa:";
+      promptEl.textContent = reverse ? target.en : target.vi;
+      // Nhiễu càng lúc càng nhiều và càng giống đáp án (cùng chữ cái đầu, độ dài gần nhau, cùng chủ đề)
+      const nDistract = Math.min(6, 4 + Math.floor(round / 5));
+      const sim = (w) =>
+        (w.en[0] === target.en[0] ? 3 : 0) + (Math.abs(w.en.length - target.en.length) <= 1 ? 2 : 0) + (w.topic === target.topic ? 1 : 0) + Math.random() * 2;
+      const distractors = pool
+        .filter((w) => w.en !== target.en)
+        .map((w) => [sim(w), w])
+        .sort((a, b) => b[0] - a[0])
+        .slice(0, nDistract)
+        .map((x) => x[1]);
       const options = shuffle([target, ...distractors]);
       const fieldW = field.clientWidth || 300;
-      const speed = 55 + round * 6; // px / giây
+      const speed = Math.min(230, 85 + round * 9); // px / giây
       options.forEach((w, i) => {
         const b = el("button", "gm-bubble");
         b.type = "button";
-        b.textContent = w.en;
+        b.textContent = reverse ? w.vi : w.en;
         b.style.visibility = "hidden";
         field.appendChild(b);
         const bw = b.offsetWidth || 90;
-        const x = Math.round(Math.random() * Math.max(0, fieldW - bw - 8)) + 4;
+        const x = Math.round(Math.random() * Math.max(0, fieldW - bw - 44)) + 22;
         b.style.left = `${x}px`;
-        const obj = { el: b, w, y: -50, speed, spawnAt: performance.now() + i * 750, started: false, isTarget: w === target };
+        const sway = round >= 4 ? 8 + Math.random() * 12 : 0; // lắc ngang từ vòng 4
+        const obj = { el: b, w, y: -50, speed: speed * (0.9 + Math.random() * 0.25), spawnAt: performance.now() + i * 420, started: false, isTarget: w === target, sway, phase: Math.random() * 6.28 };
         b.addEventListener("click", () => onTap(obj));
         bubbles.push(obj);
       });
@@ -442,7 +454,8 @@ export function createGames({ body, speak, toast, celebrate, onXP }) {
             b.el.style.visibility = "visible";
           }
           b.y += b.speed * dt;
-          b.el.style.transform = `translateY(${b.y}px)`;
+          const sx = b.sway ? Math.sin(ts / 450 + b.phase) * b.sway : 0;
+          b.el.style.transform = `translate(${sx.toFixed(1)}px, ${b.y}px)`;
           if (b.y >= floor && b.isTarget) {
             busy = true;
             lives--;

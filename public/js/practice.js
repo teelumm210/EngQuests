@@ -79,7 +79,7 @@ function countUp(el, target, onFrame) {
  * @param {(r: object) => void} [o.onResult]       sau mỗi lần chấm
  * @param {(r: object) => void} [o.onAskFeedback]  khi bấm "Nhờ EngQuests nhận xét"
  */
-export function createPracticeCard({ text, ipa = "", meaning = "", canRecord, onResult, onAskFeedback }) {
+export function createPracticeCard({ text, ipa = "", meaning = "", canRecord, onResult, onAskFeedback, onAddWord }) {
   const isWord = tokenize(text).length === 1;
   const listener = new SpeechListener("en-US");
   let session = 0;
@@ -116,6 +116,7 @@ export function createPracticeCard({ text, ipa = "", meaning = "", canRecord, on
       <ul class="pc-tips" data-role="tips"></ul>
       <div class="pc-actions">
         <button type="button" class="pc-btn" data-act="retry">↻ Đọc lại</button>
+        <button type="button" class="pc-btn" data-act="add" hidden>＋ Thêm vào flashcard</button>
         <button type="button" class="pc-btn primary" data-act="ask">💬 Nhờ EngQuests nhận xét</button>
       </div>
     </div>
@@ -128,6 +129,7 @@ export function createPracticeCard({ text, ipa = "", meaning = "", canRecord, on
   const btnListen = $('[data-act="listen"]');
   const btnSlow = $('[data-act="slow"]');
   const btnAsk = $('[data-act="ask"]');
+  const btnAdd = $('[data-act="add"]');
 
   const defaultHint = () =>
     SpeechListener.supported
@@ -226,6 +228,14 @@ export function createPracticeCard({ text, ipa = "", meaning = "", canRecord, on
     });
 
     btnAsk.hidden = !result.heardText;
+    // Luyện xong một từ chưa có trong sổ: cho thêm vào flashcard ngay
+    const inBook = LearningStore.hasWord(text);
+    btnAdd.hidden = !(isWord && onAddWord && !inBook && result.heardText);
+    if (!btnAdd.hidden) {
+      btnAdd.disabled = false;
+      btnAdd.classList.remove("done");
+      btnAdd.textContent = "＋ Thêm vào flashcard";
+    }
     resultBox.hidden = false;
     hint.textContent = result.score >= 75 ? "Tuyệt! Bạn có thể đọc lại hoặc nhờ EngQuests nhận xét." : "Nghe lại mẫu rồi đọc lại để cải thiện điểm nhé.";
     resultBox.scrollIntoView?.({ behavior: reduceMotion() ? "auto" : "smooth", block: "nearest" });
@@ -244,6 +254,20 @@ export function createPracticeCard({ text, ipa = "", meaning = "", canRecord, on
       case "rec":
       case "retry":
         toggleRecord();
+        break;
+      case "add":
+        if (btnAdd.disabled) return;
+        btnAdd.disabled = true;
+        btnAdd.textContent = "Đang thêm…";
+        Promise.resolve(onAddWord?.({ text, ipa, meaning }))
+          .then(() => {
+            btnAdd.classList.add("done");
+            btnAdd.textContent = "✓ Đã thêm vào flashcard";
+          })
+          .catch(() => {
+            btnAdd.disabled = false;
+            btnAdd.textContent = "＋ Thêm vào flashcard";
+          });
         break;
       case "ask":
         if (!last) return;

@@ -16,6 +16,7 @@ import { initIcons, liveCallBlocker, speechBlocker, speechErrorMessage, mediaErr
 import { classifyConfirm } from "./voice-commands.js";
 import { createAccounts } from "./accounts.js";
 import { createQuests } from "./quests.js";
+import { defineWord, MEANING_PLACEHOLDER } from "./dictionary.js";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -420,6 +421,12 @@ function makePracticeCard(opts) {
         playScoreFanfare(res.score);
       }
     },
+    onAddWord: async ({ text, ipa, meaning }) => {
+      const entry = addWordToFlashcards({ word: text, ipa, meaning, category: DEFAULT_TOPIC });
+      showToast(`Đã thêm "${text}" vào flashcard!`, "success");
+      if (!meaning) await fillWordDetails(text, entry);
+      return entry;
+    },
     onAskFeedback: (r) => {
       const shown = r.isWord ? `“${r.targetText}”` : "câu vừa rồi";
       sendMessage({
@@ -468,6 +475,27 @@ function startQuickPractice() {
 }
 
 // ---------- Thẻ "Từ mới" trong Chat chữ ----------
+/** Từ đã lưu mà thiếu nghĩa/IPA/ví dụ: tra rồi cập nhật lại vào sổ từ (không chặn giao diện) */
+async function fillWordDetails(word, entry = null) {
+  const cur = entry || LearningStore.findWord(word);
+  const missing = !cur || !cur.meaning || cur.meaning === MEANING_PLACEHOLDER || !cur.ipa || !cur.example;
+  if (!missing) return null;
+  const d = await defineWord(word);
+  if (!d) return null;
+  const now = LearningStore.findWord(word) || cur || {};
+  const updated = LearningStore.saveWord({
+    word,
+    ipa: now.ipa || d.ipa,
+    pos: now.pos || d.pos,
+    meaning: !now.meaning || now.meaning === MEANING_PLACEHOLDER ? d.meaning : now.meaning,
+    example: now.example || d.example,
+    category: !now.category || now.category === DEFAULT_TOPIC ? d.topic : now.category,
+  });
+  updateBadgeUI();
+  if (modalNotebook.style.display === "flex") renderWordList();
+  return updated;
+}
+
 function addWordToFlashcards(item) {
   const entry = LearningStore.saveWord(item);
   updateBadgeUI();
@@ -796,6 +824,48 @@ function showLiveVocabCard(vocabObj) {
     voiceVocabCard.classList.remove("card-exit");
     voiceVocabCard.classList.add("card-enter");
   }
+
+  // AI chưa đưa nghĩa/IPA: tra để thẻ (và flashcard khi lưu) có nội dung thật
+  if (!vocabObj.meaning || !vocabObj.ipa) enrichLiveVocab(wordClean);
+}
+
+async function enrichLiveVocab(word) {
+  const d = await defineWord(word);
+  if (!d) return;
+  const same = (w) => w && w.word.toLowerCase() === word.toLowerCase();
+  const apply = (w) => {
+    if (!w.meaning || w.meaning === MEANING_PLACEHOLDER) w.meaning = d.meaning;
+    if (!w.ipa) w.ipa = d.ipa || "";
+    if (!w.example) w.example = d.example || "";
+    if (!w.category || w.category === DEFAULT_TOPIC) w.category = d.topic || w.category;
+  };
+  const item = discoveredWordsInCall.find(same);
+  if (item) apply(item);
+  if (same(currentLiveVocab)) {
+    apply(currentLiveVocab);
+    if (vvcIpa) vvcIpa.textContent = currentLiveVocab.ipa || "";
+    if (vvcMeaning) vvcMeaning.textContent = currentLiveVocab.meaning;
+    if (vvcExample) vvcExample.textContent = currentLiveVocab.example ? `"${currentLiveVocab.example}"` : "";
+  }
+  if (LearningStore.hasWord(word)) await fillWordDetails(word);
+  updateVoiceDiscoveredWordsUI();
+}
+
+/**
+ * AI đôi khi nói "đã lưu từ X vào sổ" mà quên gọi tool nên từ không được lưu thật và số từ mới không tăng.
+ * Khi nghe câu khẳng định đó, ứng dụng tự lưu từ để lời nói và thực tế luôn khớp nhau.
+ */
+function reconcileAiClaimedSave(text) {
+  if (!text) return;
+  const ignore = new Set(["the", "and", "that", "this", "your", "you", "word", "words", "it", "to", "in", "my", "a", "an"]);
+  const vi = text.match(/đã\s+(?:lưu|thêm)\s+(?:từ\s+)?(?:vựng\s+)?["“'*]([A-Za-z][A-Za-z'-]{1,24})["”'*]/i);
+  const en = text.match(/(?:saved|added)\s+(?:the\s+word\s+)?["“'*]([A-Za-z][A-Za-z'-]{1,24})["”'*]/i);
+  const m = vi || en;
+  if (!m) return;
+  const word = m[1].toLowerCase();
+  if (ignore.has(word) || LearningStore.hasWord(word)) return;
+  showLiveVocabCard({ word, category: DEFAULT_TOPIC });
+  confirmAddLiveVocab(null, { notifyAi: false });
 }
 
 function hideLiveVocabCard() {
@@ -846,6 +916,7 @@ function confirmAddLiveVocab(args = null, { notifyAi = true } = {}) {
   triggerConfetti();
   triggerFloatingXP(15, btnVvcSave || voiceVocabCard);
   updateBadgeUI();
+  fillWordDetails(currentLiveVocab.word); // thiếu nghĩa/IPA/ví dụ thì tra bù, không chặn
 
   showToast(`Đã thêm "${currentLiveVocab.word}" vào Flashcard!`, "success");
 
@@ -1180,6 +1251,7 @@ async function startLiveCall() {
       if (role === "turn_complete") {
         currentStreamElement = null;
         // Dự phòng khi AI nói mà quên gọi tool: đọc cả lượt rồi mới đoán điểm / từ mới
+        if (aiTurnText) reconcileAiClaimedSave(aiTurnText);
         if (!toolUsedThisTurn && aiTurnText) analyzeAiSpeechForVocabAndScore(aiTurnText);
         aiTurnText = "";
         toolUsedThisTurn = false;

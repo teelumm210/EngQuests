@@ -2461,3 +2461,32 @@ html.icons-fallback .material-symbols-rounded {
 .hg-vi { display: block; margin-top: 4px; font-size: 14px; color: var(--text-2); }
 .hg-vi b { color: var(--ok-text); font-size: 16px; }
 @media (max-width: 480px) { .hg-pic { font-size: 72px; max-width: 180px; } }
+
+/* ---------- Thanh trên cùng gọn trên điện thoại: hai hàng, không bị mất nút ---------- */
+.level-badge { white-space: nowrap; }
+.header-tools > * { flex: 0 0 auto; }
+@media (max-width: 640px) {
+  .header {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
+    min-height: 0;
+  }
+  .brand { order: 1; margin-right: auto; min-width: 0; }
+  .brand h1 { font-size: 17px; }
+  .header-actions { order: 2; gap: 0; }
+  .header-actions .btn-icon { width: 34px; height: 34px; }
+  .header-actions .btn-icon svg { width: 18px; height: 18px; }
+  .header-tools {
+    order: 3;
+    flex: 1 0 100%;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .header-tools::-webkit-scrollbar { display: none; }
+  .tool-btn { padding: 5px 9px; font-size: 12px; }
+  .level-badge { padding: 3px 9px; font-size: 11.5px; }
+  #btn-open-notebook .tool-text { display: inline; }
+}

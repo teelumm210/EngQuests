@@ -214,8 +214,10 @@ export class SpeechListener {
   /**
    * Bắt đầu nghe một lượt. Trả về Promise<{text, confidence}[]>.
    * Reject với Error có .code: unsupported | not-allowed | audio-capture | no-speech | network | aborted
+   * earlyMatch(text) -> boolean: nếu có, trả kết quả NGAY khi một kết quả tạm đã khớp, không chờ người nói dứt
+   * câu và hệ thống tự cắt (nhanh hơn khoảng 0,5-1 giây).
    */
-  listen({ onInterim } = {}) {
+  listen({ onInterim, earlyMatch } = {}) {
     return new Promise((resolve, reject) => {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
@@ -228,7 +230,7 @@ export class SpeechListener {
       rec.lang = this.lang;
       rec.interimResults = true;
       rec.continuous = false;
-      rec.maxAlternatives = 3;
+      rec.maxAlternatives = earlyMatch ? 5 : 3;
       this.rec = rec;
 
       let finalAlts = null;
@@ -247,6 +249,19 @@ export class SpeechListener {
       rec.onresult = (event) => {
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const res = event.results[i];
+          if (earlyMatch && !settled) {
+            const alts = [];
+            for (let k = 0; k < res.length; k++) alts.push({ text: res[k].transcript, confidence: res[k].confidence });
+            if (alts.some((a) => earlyMatch(a.text))) {
+              done(resolve, alts);
+              try {
+                rec.abort();
+              } catch {
+                /* bỏ qua */
+              }
+              return;
+            }
+          }
           if (res.isFinal) {
             finalAlts = [];
             for (let k = 0; k < res.length; k++) {

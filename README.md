@@ -11,6 +11,7 @@ Chat, giọng nói thời gian thực (Gemini Live) và nhận diện đồ vậ
   - Giới hạn tần suất theo IP khai báo trong `config.rateLimit` của từng function.
   - `POST /api/auth`: đăng ký / đăng nhập (tên đăng nhập + mật khẩu, mật khẩu băm scrypt, không cần email).
   - `POST /api/progress`: đọc / ghi tiến trình học của tài khoản (token Bearer). Lưu bằng Netlify Blobs.
+  - `POST /api/define`: tra nghĩa tiếng Việt, IPA, ví dụ cho một từ (dùng khi lưu từ chưa có nghĩa).
   - `POST /api/vision`: phân tích ảnh camera cho Săn từ, Khung cảnh, Menu & biển hiệu.
 - Persona dùng chung ở `public/js/persona.js` (cả client lẫn function đều import).
 
@@ -92,3 +93,13 @@ Chip "Săn từ, quét cảnh, dịch menu" (mã `public/js/quests.js`):
 
 - **Khủng long gõ / đọc từ**: gõ xong từ thì khủng long tự nhảy khi tới gần xương rồng. Ô nhập không bị khoá giữa các xương rồng nên không phải chạm lại, bàn phím điện thoại giữ nguyên; chế độ đọc tự nghe lại sau lần bấm micro đầu tiên (trừ iPhone/iPad).
 - **Đoán chữ**: nhìn hình (emoji, dữ liệu ở `PICTURE_WORDS` trong `public/js/games-data.js`) rồi đoán từ tiếng Anh; đoán xong mới hiện nghĩa tiếng Việt.
+
+## Cấu hình AI (giảm lỗi "AI phản hồi quá lâu")
+
+`netlify/lib/gemini.mjs` dùng chung cho `chat`, `vision`, `define`: model chính chạy trước, nếu sau ~6,5 giây chưa trả lời thì mở thêm model dự phòng **chạy song song** (ai xong trước thắng), lỗi tạm thời thì chuyển model ngay, và gọi với thinking tắt để trả lời nhanh (tự gọi lại bình thường nếu model từ chối cấu hình này).
+
+## Cập nhật game
+
+- **Khủng long đọc từ**: nhảy ngay khi kết quả nhận giọng tạm thời đã khớp từ, không chờ trình duyệt tự cắt (`earlyMatch` trong `SpeechListener`).
+- **Mưa chữ**: 15 vòng, tốc độ tăng nhanh hơn, 5-7 bóng với đáp án nhiễu giống đáp án, bóng lắc ngang từ vòng 4, vòng chẵn từ vòng 6 đảo chiều (cho từ tiếng Anh, bắt nghĩa tiếng Việt).
+- **Máy bay bắn chim**: mỗi từ gõ đúng bắn loạt đạn tự dẫn, mỗi con chim trên màn hình nhận đủ số viên để bị hạ.
