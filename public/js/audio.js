@@ -159,6 +159,14 @@ export class AudioRecorder {
 
     const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
     this.audioCtx = new AudioCtxClass({ sampleRate: 16000 });
+    // iOS Safari tạo AudioContext ở trạng thái "suspended" nếu không nằm trong lần chạm: mở lại để mic có tín hiệu
+    if (this.audioCtx.state === "suspended") {
+      try {
+        await this.audioCtx.resume();
+      } catch {
+        /* bỏ qua */
+      }
+    }
     this.source = this.audioCtx.createMediaStreamSource(this.mediaStream);
 
     // Buffer size 2048 at 16kHz ≈ 128ms chunks

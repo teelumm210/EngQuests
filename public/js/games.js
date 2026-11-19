@@ -4,7 +4,7 @@
 //  1. Ghép thẻ       (kiểu Memory)         - ghép từ tiếng Anh với nghĩa tiếng Việt
 //  2. Mưa chữ        (kiểu Word Catch)     - chạm đúng từ đang rơi trước khi chạm đất
 //  3. Ngữ pháp nhanh (kiểu Quiz Blitz)     - điền khuyết, 3 mạng, tính giờ, combo
-//  4. Đoán chữ       (kiểu Hangman)        - đoán từ qua nghĩa tiếng Việt
+//  4. Đoán chữ       (kiểu Hangman)        - nhìn hình đoán từ tiếng Anh, đoán đúng hiện nghĩa tiếng Việt
 //  5. Xếp câu        (kiểu Duolingo)       - sắp xếp từ thành câu đúng
 //  6-8. Khủng long gõ từ, Khủng long đọc từ, Máy bay bắn chim -> xem games-arcade.js
 //  9.   Bắn cá (đại dương, gõ từ trên cá, 1/2/3 phút)             -> xem games-fish.js
@@ -15,7 +15,7 @@
 
 import { LearningStore } from "./store.js";
 import { normalizeTopic } from "./features.js";
-import { WORDS, GRAMMAR, SENTENCES } from "./games-data.js";
+import { WORDS, GRAMMAR, SENTENCES, PICTURE_WORDS } from "./games-data.js";
 import { startDinoType, startDinoSpeak, startPlaneShooter } from "./games-arcade.js";
 import { startFishShooter } from "./games-fish.js";
 
@@ -59,6 +59,7 @@ function saveBest(id, score) {
     best[id] = score;
     try {
       localStorage.setItem(BEST_KEY, JSON.stringify(best));
+      window.dispatchEvent(new Event("voca-data-changed"));
     } catch {
       /* bỏ qua */
     }
@@ -576,8 +577,12 @@ export function createGames({ body, speak, toast, celebrate, onXP }) {
   function startHangman({ area, setStats, finish, pool, say }) {
     const ROUNDS = 5;
     const MAX_WRONG = 6;
-    const candidates = pool.filter((w) => /^[a-z]{4,10}$/i.test(w.en));
-    const words = pick(candidates.length >= ROUNDS ? candidates : pool.filter((w) => /^[a-z]+$/i.test(w.en)), ROUNDS);
+    // Chỉ dùng từ có hình. Nếu từ đã có trong sổ của người dùng thì dùng nghĩa họ đã lưu và ưu tiên cho xuất hiện.
+    const mineVi = new Map(pool.map((w) => [String(w.en).toLowerCase(), w.vi]));
+    const all = PICTURE_WORDS.filter((w) => /^[a-z]{3,10}$/.test(w.en)).map((w) => ({ ...w, vi: mineVi.get(w.en) || w.vi, mine: mineVi.has(w.en) }));
+    const mine = pick(all.filter((w) => w.mine), 2);
+    const rest = pick(all.filter((w) => !mine.includes(w)), ROUNDS - mine.length);
+    const words = pick([...mine, ...rest], ROUNDS);
     let idx = 0;
     let solved = 0;
     let score = 0;
@@ -617,7 +622,8 @@ export function createGames({ body, speak, toast, celebrate, onXP }) {
       wrong = 0;
       hintUsed = false;
       area.innerHTML = `
-        <div class="gm-prompt">Nghĩa: <b>${esc(cur.vi)}</b>${cur.topic ? `<small> · ${esc(normalizeTopic(cur.topic))}</small>` : ""}</div>
+        <div class="gm-prompt">Đây là gì bằng tiếng Anh?</div>
+        <div class="hg-pic" role="img" aria-label="Hình minh hoạ cần đoán">${cur.pic}</div>
         <div class="hg-lives" aria-label="Số mạng còn lại"></div>
         <div class="hg-word" aria-live="polite"></div>
         <div class="gm-keys"></div>
@@ -669,7 +675,8 @@ export function createGames({ body, speak, toast, celebrate, onXP }) {
     function roundDone(won) {
       over = true;
       const box = el("div", `gm-explain ${won ? "" : "is-bad"}`);
-      box.innerHTML = `${won ? "✅ Giỏi lắm!" : "❌ Hết lượt rồi."} Đáp án: <b>${esc(cur.en)}</b> = ${esc(cur.vi)}`;
+      // Đoán xong mới hiện nghĩa tiếng Việt
+      box.innerHTML = `${won ? "✅ Giỏi lắm!" : "❌ Hết lượt rồi."} Đáp án: <b>${esc(cur.en)}</b><span class="hg-vi">Nghĩa tiếng Việt: <b>${esc(cur.vi)}</b></span>`;
       const nextBtn = el("button", "gm-btn gm-btn-primary", idx >= words.length - 1 ? "Xem kết quả →" : "Từ tiếp theo →");
       nextBtn.type = "button";
       nextBtn.addEventListener("click", () => {
@@ -818,7 +825,7 @@ export function createGames({ body, speak, toast, celebrate, onXP }) {
     { id: "match", emoji: "🃏", name: "Ghép thẻ", desc: "Lật thẻ, ghép từ tiếng Anh với nghĩa tiếng Việt.", skill: "Từ vựng · Trí nhớ", start: startMatch },
     { id: "rain", emoji: "🌧️", name: "Mưa chữ", desc: "Chạm đúng từ đang rơi trước khi nó chạm đất.", skill: "Từ vựng · Phản xạ", start: startRain },
     { id: "grammar", emoji: "⚡", name: "Ngữ pháp nhanh", desc: "Điền khuyết có tính giờ, combo và 3 mạng.", skill: "Ngữ pháp", start: startGrammar },
-    { id: "hangman", emoji: "🔤", name: "Đoán chữ", desc: "Đoán từ tiếng Anh từ nghĩa tiếng Việt.", skill: "Từ vựng · Chính tả", start: startHangman },
+    { id: "hangman", emoji: "🔤", name: "Đoán chữ", desc: "Nhìn hình rồi đoán từ tiếng Anh, đúng sẽ hiện nghĩa tiếng Việt.", skill: "Từ vựng · Chính tả", start: startHangman },
     { id: "builder", emoji: "🧩", name: "Xếp câu", desc: "Sắp xếp các từ thành câu tiếng Anh đúng.", skill: "Ngữ pháp · Trật tự từ", start: startBuilder },
     { id: "dino-type", emoji: "🦖", name: "Khủng long gõ từ", desc: "Gõ đúng từ trên xương rồng để khủng long nhảy qua.", skill: "Từ vựng · Gõ nhanh", start: startDinoType },
     { id: "dino-speak", emoji: "🎙️", name: "Khủng long đọc từ", desc: "Đọc đúng từ trên xương rồng để khủng long nhảy qua.", skill: "Từ vựng · Phát âm", start: startDinoSpeak },

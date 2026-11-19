@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   STREAK: "voca_streak",
   XP: "voca_xp",
   GOAL: "voca_daily_goal",
+  TOMBSTONES: "voca_deleted_words", // từ đã xoá (để đồng bộ tài khoản không làm sống lại)
 };
 
 const DEFAULT_STATS = {
@@ -34,6 +35,12 @@ function writeJSON(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
     /* localStorage đầy hoặc bị chặn: bỏ qua */
+  }
+  // Báo cho accounts.js biết có dữ liệu mới cần đồng bộ lên tài khoản
+  try {
+    window.dispatchEvent(new Event("voca-data-changed"));
+  } catch {
+    /* môi trường không có window */
   }
 }
 
@@ -126,7 +133,16 @@ export class LearningStore {
   }
 
   static deleteWord(id) {
-    const words = this.getWords().filter((w) => w.id !== id);
+    const all = this.getWords();
+    const gone = all.find((w) => w.id === id);
+    const words = all.filter((w) => w.id !== id);
+    if (gone) {
+      const tomb = readJSON(STORAGE_KEYS.TOMBSTONES, {});
+      tomb[String(gone.word).trim().toLowerCase()] = Date.now();
+      const keys = Object.keys(tomb);
+      if (keys.length > 500) keys.sort((a, b) => tomb[a] - tomb[b]).slice(0, keys.length - 500).forEach((k) => delete tomb[k]);
+      writeJSON(STORAGE_KEYS.TOMBSTONES, tomb);
+    }
     writeJSON(STORAGE_KEYS.WORDS, words);
     return words;
   }

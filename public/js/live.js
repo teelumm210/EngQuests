@@ -12,6 +12,9 @@ import { API_BASE } from "./config.js";
 const WS_BASE =
   "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained";
 const MAX_RECONNECTS = 3;
+const TOKEN_TIMEOUT_MS = 12000; // xin token tạm
+const SOCKET_OPEN_TIMEOUT_MS = 12000; // mở WebSocket
+const SETUP_TIMEOUT_MS = 15000; // chờ Gemini xác nhận phiên (setupComplete)
 
 // Đoán nguyên nhân từ mã đóng / lý do mà server trả về
 function classifyClose(code, reason = "") {
@@ -46,6 +49,7 @@ export class GeminiLiveClient {
     this.reconnecting = false;
     this.closing = false;
     this.setupDone = false;
+    this.setupTimer = null;
 
     // Callbacks
     this.onStateChange = options.onStateChange || (() => {});
@@ -54,6 +58,7 @@ export class GeminiLiveClient {
     this.onNotice = options.onNotice || (() => {});
     this.onSpeakingChange = options.onSpeakingChange || (() => {});
     this.onToolCall = options.onToolCall || (() => {});
+    this.onMicError = options.onMicError || (() => {});
     this.player.onPlayStateChange = (playing) => this.onSpeakingChange(playing);
     this.muted = false;
   }
@@ -98,10 +103,18 @@ export class GeminiLiveClient {
   // Xin token tạm từ server (dùng 1 lần; nối lại cùng phiên không tốn thêm lượt dùng)
   async fetchToken() {
     let res;
+    const ctrl = new AbortController();
+    const abortTimer = setTimeout(() => ctrl.abort(), TOKEN_TIMEOUT_MS);
     try {
-      res = await fetch(`${API_BASE}/api/live-token`, { method: "POST" });
-    } catch {
-      throw new Error("Không kết nối được tới máy chủ. Kiểm tra mạng của bạn.");
+      res = await fetch(`${API_BASE}/api/live-token`, { method: "POST", signal: ctrl.signal });
+    } catch (e) {
+      throw new Error(
+        e?.name === "AbortError"
+          ? "Máy chủ phản hồi quá lâu. Kiểm tra mạng rồi bấm gọi lại nhé."
+          : "Không kết nối được tới máy chủ. Kiểm tra mạng của bạn."
+      );
+    } finally {
+      clearTimeout(abortTimer);
     }
     let data = null;
     try {
@@ -132,13 +145,34 @@ export class GeminiLiveClient {
       }
       this.ws = ws;
       this.setupDone = false;
+      this.setupConfirmed = false;
       let opened = false;
 
+      // WebSocket bị chặn ngầm (trình duyệt trong app, mạng công ty...) có thể không báo lỗi mà treo mãi
+      const openTimer = setTimeout(() => {
+        if (opened || ws !== this.ws) return;
+        ws.onclose = ws.onerror = ws.onopen = ws.onmessage = null;
+        try {
+          ws.close();
+        } catch {
+          /* đã đóng */
+        }
+        reject(new Error("Kết nối tới Gemini Live quá lâu. Kiểm tra mạng, hoặc thử mở bằng Chrome/Safari."));
+      }, SOCKET_OPEN_TIMEOUT_MS);
+
       ws.onopen = async () => {
+        clearTimeout(openTimer);
         if (ws !== this.ws) return;
         opened = true;
         this.isConnected = true;
         this.sendSetup(handle);
+        // Server không xác nhận phiên trong thời gian cho phép: báo lỗi thay vì treo ở "Đang kết nối…"
+        clearTimeout(this.setupTimer);
+        this.setupTimer = setTimeout(() => {
+          if (ws !== this.ws || this.closing || this.setupConfirmed) return;
+          this.onError(new Error("Gemini Live không phản hồi. Bạn bấm gọi lại hoặc thử lại sau nhé."));
+          this.disconnect();
+        }, SETUP_TIMEOUT_MS);
         // Dự phòng: nếu server không gửi setupComplete thì vẫn mở luồng âm thanh sau 1.5s
         setTimeout(() => {
           if (ws === this.ws) this.setupDone = true;
@@ -162,7 +196,9 @@ export class GeminiLiveClient {
           rec.setMuted(this.muted);
         } catch (recErr) {
           console.warn("Microphone access error:", recErr);
-          this.onError(new Error("Vui lòng cấp quyền Microphone để trò chuyện bằng giọng nói."));
+          this.recorder = null;
+          // Cuộc gọi vẫn mở (còn nhắn chữ được) nhưng báo rõ là mic không dùng được
+          this.onMicError(recErr);
         }
         resolve();
       };
@@ -180,6 +216,7 @@ export class GeminiLiveClient {
       };
 
       ws.onerror = (event) => {
+        clearTimeout(openTimer);
         console.error("Live WebSocket error:", event);
         if (!opened && ws === this.ws) reject(new Error("Không kết nối được tới Gemini Live. Kiểm tra mạng của bạn."));
       };
@@ -276,13 +313,14 @@ export class GeminiLiveClient {
               },
               {
                 name: "save_to_flashcard",
-                description: "Lưu từ vựng vào flashcard ngay khi người dùng nói 'có', 'lưu đi', 'thêm đi', 'yes', 'ok' hoặc đồng ý lưu từ.",
+                description: "Lưu từ vựng vào flashcard ngay khi người dùng đồng ý bằng tiếng Việt hoặc tiếng Anh ('có', 'lưu đi', 'thêm đi', 'yes', 'ok', 'save it'), hoặc chủ động yêu cầu thêm một từ.",
                 parameters: {
                   type: "OBJECT",
                   properties: {
                     word: { type: "STRING", description: "Từ vựng tiếng Anh cần lưu" },
                     ipa: { type: "STRING", description: "Phiên âm IPA" },
                     meaning: { type: "STRING", description: "Nghĩa tiếng Việt" },
+                    example: { type: "STRING", description: "Câu ví dụ bằng tiếng Anh" },
                     category: { type: "STRING", description: "Chủ đề" }
                   },
                   required: ["word"]
@@ -343,6 +381,8 @@ export class GeminiLiveClient {
   handleServerMessage(msg) {
     if (msg.setupComplete) {
       this.setupDone = true;
+      this.setupConfirmed = true;
+      clearTimeout(this.setupTimer);
       this.reconnectAttempts = 0; // kết nối ổn định -> reset bộ đếm
     }
 
@@ -385,6 +425,8 @@ export class GeminiLiveClient {
     const serverContent = msg.serverContent;
     if (!serverContent) return;
     this.setupDone = true;
+    this.setupConfirmed = true;
+    clearTimeout(this.setupTimer);
 
     // Người dùng nói chen ngang -> dừng tiếng AI
     if (serverContent.interrupted) {
@@ -438,6 +480,7 @@ export class GeminiLiveClient {
 
   disconnect() {
     this.closing = true;
+    clearTimeout(this.setupTimer);
     this.stopVideoStreaming();
     if (this.recorder) {
       this.recorder.stop();

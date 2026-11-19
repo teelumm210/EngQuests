@@ -97,3 +97,54 @@ export const SENTENCES = [
   { en: "There are many beautiful places in Vietnam.", vi: "Có rất nhiều nơi đẹp ở Việt Nam." },
   { en: "My favorite hobby is listening to music.", vi: "Sở thích của tôi là nghe nhạc." },
 ];
+
+// ---------- Hình minh hoạ cho game "Đoán chữ" (đoán từ tiếng Anh qua hình) ----------
+// Mỗi mục: [từ tiếng Anh, nghĩa tiếng Việt, emoji làm hình, chủ đề]. Chỉ chọn vật cụ thể, nhìn là nhận ra.
+const P = (topic, rows) => rows.map(([en, vi, pic]) => ({ en, vi, pic, topic }));
+
+export const PICTURE_WORDS = [
+  ...P("Thiên nhiên & Thời tiết", [
+    ["cat", "con mèo", "🐱"], ["dog", "con chó", "🐶"], ["bird", "con chim", "🐦"], ["fish", "con cá", "🐟"], ["horse", "con ngựa", "🐴"],
+    ["cow", "con bò", "🐮"], ["pig", "con heo", "🐷"], ["rabbit", "con thỏ", "🐰"], ["elephant", "con voi", "🐘"], ["lion", "con sư tử", "🦁"],
+    ["tiger", "con hổ", "🐯"], ["monkey", "con khỉ", "🐵"], ["duck", "con vịt", "🦆"], ["frog", "con ếch", "🐸"], ["turtle", "con rùa", "🐢"],
+    ["snake", "con rắn", "🐍"], ["butterfly", "con bướm", "🦋"], ["bee", "con ong", "🐝"], ["spider", "con nhện", "🕷️"], ["penguin", "chim cánh cụt", "🐧"],
+    ["whale", "con cá voi", "🐳"], ["crab", "con cua", "🦀"], ["tree", "cái cây", "🌳"], ["flower", "bông hoa", "🌸"], ["cloud", "đám mây", "☁️"],
+    ["rainbow", "cầu vồng", "🌈"], ["moon", "mặt trăng", "🌙"], ["star", "ngôi sao", "⭐"], ["sun", "mặt trời", "☀️"], ["mountain", "ngọn núi", "⛰️"],
+    ["snowman", "người tuyết", "⛄"], ["umbrella", "cái ô", "☂️"], ["fire", "ngọn lửa", "🔥"],
+  ]),
+  ...P("Đồ ăn & Đồ uống", [
+    ["apple", "quả táo", "🍎"], ["banana", "quả chuối", "🍌"], ["orange", "quả cam", "🍊"], ["grapes", "chùm nho", "🍇"], ["lemon", "quả chanh", "🍋"],
+    ["strawberry", "quả dâu tây", "🍓"], ["watermelon", "quả dưa hấu", "🍉"], ["pineapple", "quả dứa", "🍍"], ["cherry", "quả anh đào", "🍒"], ["peach", "quả đào", "🍑"],
+    ["carrot", "cà rốt", "🥕"], ["tomato", "cà chua", "🍅"], ["potato", "khoai tây", "🥔"], ["corn", "bắp ngô", "🌽"], ["mushroom", "cây nấm", "🍄"],
+    ["bread", "bánh mì", "🍞"], ["cheese", "phô mai", "🧀"], ["egg", "quả trứng", "🥚"], ["pizza", "bánh pizza", "🍕"], ["burger", "bánh kẹp thịt", "🍔"],
+    ["cake", "bánh ngọt", "🎂"], ["cookie", "bánh quy", "🍪"], ["candy", "kẹo", "🍬"], ["milk", "sữa", "🥛"], ["coffee", "cà phê", "☕"],
+    ["noodle", "mì sợi", "🍜"], ["sandwich", "bánh mì kẹp", "🥪"], ["chicken", "thịt gà", "🍗"], ["popcorn", "bắp rang", "🍿"],
+  ]),
+  ...P("Nhà cửa & Đồ dùng", [
+    ["house", "ngôi nhà", "🏠"], ["chair", "cái ghế", "💺"], ["bed", "cái giường", "🛏️"], ["door", "cánh cửa", "🚪"],
+    ["window", "cửa sổ", "🪟"], ["lamp", "cái đèn", "💡"], ["clock", "đồng hồ", "🕒"], ["key", "chìa khoá", "🔑"], ["mirror", "cái gương", "🪞"],
+    ["scissors", "cái kéo", "✂️"], ["bucket", "cái xô", "🪣"], ["candle", "cây nến", "🕯️"], ["basket", "cái giỏ", "🧺"], ["toothbrush", "bàn chải đánh răng", "🪥"],
+    ["spoon", "cái thìa", "🥄"], ["fork", "cái nĩa", "🍴"], ["knife", "con dao", "🔪"], ["bag", "cái túi", "👜"],
+    ["hat", "cái mũ", "🎩"], ["shoe", "chiếc giày", "👟"], ["glasses", "cặp kính", "👓"], ["dress", "cái váy", "👗"], ["shirt", "cái áo sơ mi", "👕"],
+    ["ring", "chiếc nhẫn", "💍"], ["crown", "vương miện", "👑"], ["gift", "món quà", "🎁"], ["balloon", "quả bóng bay", "🎈"], ["broom", "cái chổi", "🧹"],
+  ]),
+  ...P("Công nghệ", [
+    ["phone", "điện thoại", "📱"], ["laptop", "máy tính xách tay", "💻"], ["camera", "máy ảnh", "📷"], ["battery", "cục pin", "🔋"], ["keyboard", "bàn phím", "⌨️"],
+    ["television", "ti vi", "📺"], ["radio", "đài radio", "📻"], ["robot", "người máy", "🤖"], ["rocket", "tên lửa", "🚀"],
+    ["headphones", "tai nghe", "🎧"], ["printer", "máy in", "🖨️"],
+  ]),
+  ...P("Du lịch & Di chuyển", [
+    ["car", "ô tô", "🚗"], ["bus", "xe buýt", "🚌"], ["bicycle", "xe đạp", "🚲"], ["train", "tàu hoả", "🚆"], ["plane", "máy bay", "✈️"],
+    ["ship", "con tàu", "🚢"], ["helicopter", "trực thăng", "🚁"], ["taxi", "xe taxi", "🚕"], ["ticket", "tấm vé", "🎫"], ["map", "bản đồ", "🗺️"],
+    ["hotel", "khách sạn", "🏨"], ["tent", "cái lều", "⛺"], ["anchor", "cái neo", "⚓"],
+  ]),
+  ...P("Giải trí & Thể thao", [
+    ["football", "quả bóng đá", "⚽"], ["basketball", "bóng rổ", "🏀"], ["guitar", "đàn ghi-ta", "🎸"], ["piano", "đàn piano", "🎹"], ["drum", "cái trống", "🥁"],
+    ["trophy", "chiếc cúp", "🏆"], ["medal", "tấm huy chương", "🏅"], ["book", "quyển sách", "📖"], ["pencil", "cây bút chì", "✏️"], ["palette", "bảng màu vẽ", "🎨"],
+    ["movie", "bộ phim", "🎬"], ["dice", "con xúc xắc", "🎲"], ["microphone", "micro", "🎤"],
+  ]),
+  ...P("Sức khỏe & Cơ thể", [
+    ["heart", "trái tim", "❤️"], ["tooth", "cái răng", "🦷"], ["eye", "con mắt", "👁️"], ["hand", "bàn tay", "✋"], ["ear", "cái tai", "👂"],
+    ["nose", "cái mũi", "👃"], ["brain", "bộ não", "🧠"], ["bone", "cái xương", "🦴"], ["medicine", "viên thuốc", "💊"], ["doctor", "bác sĩ", "🧑‍⚕️"],
+  ]),
+];

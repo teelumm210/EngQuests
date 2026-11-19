@@ -9,6 +9,9 @@ Chat, giọng nói thời gian thực (Gemini Live) và nhận diện đồ vậ
   - `POST /api/chat`: proxy chat chữ. Persona, model và giới hạn token do server quyết định.
   - `POST /api/live-token`: cấp token tạm (dùng 1 lần, tối đa 30 phút) để trình duyệt mở WebSocket Gemini Live. Model và persona bị khoá trong token.
   - Giới hạn tần suất theo IP khai báo trong `config.rateLimit` của từng function.
+  - `POST /api/auth`: đăng ký / đăng nhập (tên đăng nhập + mật khẩu, mật khẩu băm scrypt, không cần email).
+  - `POST /api/progress`: đọc / ghi tiến trình học của tài khoản (token Bearer). Lưu bằng Netlify Blobs.
+  - `POST /api/vision`: phân tích ảnh camera cho Săn từ, Khung cảnh, Menu & biển hiệu.
 - Persona dùng chung ở `public/js/persona.js` (cả client lẫn function đều import).
 
 ## Chạy local
@@ -25,7 +28,7 @@ Trên Windows có thể chạy `start.bat`.
 
 1. Đưa code lên GitHub (không kèm `.env`, `node_modules`, `.netlify`).
 2. Netlify > Add new site > Import an existing project > chọn repo. Build command để trống, publish directory `public` (đã có trong `netlify.toml`).
-3. Site configuration > Environment variables: thêm `GEMINI_API_KEY`. Có thể thêm `CHAT_MODEL`, `LIVE_MODEL` nếu muốn đổi model.
+3. Site configuration > Environment variables: thêm `GEMINI_API_KEY`. Có thể thêm `CHAT_MODEL`, `LIVE_MODEL` nếu muốn đổi model, và `AUTH_SECRET` (chuỗi ngẫu nhiên từ 16 ký tự) để ký phiên đăng nhập; nếu không đặt, máy chủ tự sinh một khoá và lưu trong Netlify Blobs.
 4. Deploy, rồi thử chat chữ và một cuộc gọi thoại.
 
 Lưu ý: nếu đổi biến môi trường sau khi deploy, cần deploy lại để function nhận giá trị mới.
@@ -62,3 +65,30 @@ Mã nguồn: `public/js/games.js` (logic), `public/js/games-arcade.js` (khủng 
 - `public/js/config.js`: trên `*.github.io` ứng dụng tự gọi API ở `https://engquests.netlify.app`; trên Netlify gọi `/api/...` cùng domain.
 - `netlify/lib/cors.mjs`: cho phép `https://teelumm210.github.io` gọi API. Thêm domain khác bằng biến môi trường `ALLOWED_ORIGINS` (cách nhau bằng dấu phẩy).
 - Site Netlify phải ở chế độ **công khai** thì trang GitHub Pages mới gọi được chat AI và gọi thoại.
+
+
+## Tài khoản & đồng bộ
+
+- Nút người ở góc trên phải mở khung đăng nhập / tạo tài khoản. Không đăng nhập vẫn dùng bình thường (dữ liệu nằm trong trình duyệt).
+- Khi đăng nhập, dữ liệu trên máy được **gộp** với dữ liệu tài khoản (từ vựng hợp hai bên, XP/điểm game lấy giá trị lớn hơn) rồi tự đồng bộ sau mỗi thay đổi. Mã gộp: `public/js/sync-merge.js`; đồng bộ và giao diện: `public/js/accounts.js`.
+- Tài khoản không có email nên không khôi phục được mật khẩu.
+
+## Camera học từ
+
+Chip "Săn từ, quét cảnh, dịch menu" (mã `public/js/quests.js`):
+
+- 🎯 **Săn từ**: mỗi ngày 5 chữ cái (giống nhau trên mọi thiết bị), chụp vật có tên tiếng Anh bắt đầu bằng chữ đó. Đúng +20 XP (+10 nếu dùng gợi ý), xong cả 5 chữ +50 XP. Máy chủ tự kiểm tra chữ cái đầu.
+- 🏠 **Khung cảnh**: AI nêu 10 từ trong ảnh, sau đó hỏi lại (gõ hoặc nói đáp án), mỗi câu đúng +5 XP.
+- 🍽️ **Menu & biển hiệu**: giải nghĩa từng mục và lưu từ vào sổ.
+- Trên điện thoại dùng ô chọn ảnh có `capture` (mở app camera, hoạt động cả khi trình duyệt chặn `getUserMedia`); trên máy tính có thêm nút webcam. Ảnh được thu nhỏ tại máy và không được lưu.
+
+## Mic và trình duyệt
+
+- `public/js/compat.js` nhận biết trình duyệt trong app (Zalo, Facebook, Messenger...) và trình duyệt không có micro, rồi hiện hướng dẫn mở bằng Safari/Chrome thay vì treo ở "Đang kết nối…". Kết nối cuộc gọi có giới hạn thời gian và báo lỗi rõ ràng.
+- Lệnh "Có / Lưu đi / Yes / Save it" được nhận cả hai ngôn ngữ (`public/js/voice-commands.js`), và AI được dặn dựa vào âm thanh chứ không chờ bản chép lời.
+- Icon Material tải với `display=block`; nếu font không tải được, icon tự chuyển sang emoji, không hiện chữ như `book_2`.
+
+## Game
+
+- **Khủng long gõ / đọc từ**: gõ xong từ thì khủng long tự nhảy khi tới gần xương rồng. Ô nhập không bị khoá giữa các xương rồng nên không phải chạm lại, bàn phím điện thoại giữ nguyên; chế độ đọc tự nghe lại sau lần bấm micro đầu tiên (trừ iPhone/iPad).
+- **Đoán chữ**: nhìn hình (emoji, dữ liệu ở `PICTURE_WORDS` trong `public/js/games-data.js`) rồi đoán từ tiếng Anh; đoán xong mới hiện nghĩa tiếng Việt.

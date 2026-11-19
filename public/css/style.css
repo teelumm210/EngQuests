@@ -2301,3 +2301,163 @@ body {
 .gm-card { border-radius: 12px; }
 .gm-card:hover { transform: none; box-shadow: 0 0 0 1px var(--accent); }
 .gx-stage { border-radius: 12px; }
+
+
+/* ==============================================
+   BỔ SUNG: icon dự phòng, tài khoản, camera học từ, thông báo
+   (chỉ thêm mới, không đổi các quy tắc ở trên)
+   ============================================== */
+
+/* ---------- Icon Material: không bao giờ để lộ chữ tên icon ---------- */
+html:not(.icons-ready):not(.icons-fallback) .material-symbols-rounded {
+  display: inline-block;
+  width: 1em;
+  overflow: hidden;
+  visibility: hidden;
+}
+html.icons-fallback .material-symbols-rounded {
+  font-family: system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif !important;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  font-size: 0.95em;
+  line-height: 1;
+}
+
+/* ---------- Nút tài khoản trên thanh trên ---------- */
+.btn-account { position: relative; }
+.btn-account .account-initial {
+  display: none;
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  align-items: center;
+  justify-content: center;
+}
+.btn-account.logged-in .ico-user { display: none; }
+.btn-account.logged-in .account-initial { display: flex; }
+@media (max-width: 480px) {
+  .header-actions .btn-icon { width: 36px; height: 36px; }
+}
+
+/* ---------- Khung tài khoản ---------- */
+.account-card { max-width: 420px; }
+#account-view-guest[hidden], #account-view-user[hidden], .acc-error[hidden] { display: none !important; }
+.account-tabs { padding: 0; margin-bottom: 2px; }
+.account-tabs .nb-tab { flex: 1; text-align: center; padding: 10px 8px; }
+.account-form { display: flex; flex-direction: column; gap: 14px; }
+.acc-show { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); cursor: pointer; }
+.acc-error { color: var(--danger-text); font-size: 13px; line-height: 1.5; margin: 0; }
+.acc-user-card { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 16px; background: var(--bg-elev); border: 1px solid var(--border); }
+.acc-user-card strong { font-size: 16px; color: var(--text-strong); }
+.acc-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
+.acc-sync { margin: 2px 0 0; font-size: 12.5px; color: var(--text-2); }
+
+/* ---------- Hộp thông báo (mic không dùng được...) ---------- */
+.eq-notice { z-index: 120; align-items: center; padding: 16px; }
+.eq-notice-card { max-width: 420px; padding: 22px 22px 18px; gap: 12px; max-height: 90vh; overflow-y: auto; }
+.eq-notice-card h3 { font-size: 17px; font-weight: 700; color: var(--text-strong); margin: 0; }
+.eq-notice-card p { font-size: 14px; line-height: 1.6; color: var(--text-2); margin: 0; }
+.eq-notice-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 4px; }
+@media (max-width: 600px) {
+  .eq-notice { align-items: center; padding: 16px; }
+  .eq-notice-card { border-radius: 20px; }
+}
+
+/* ---------- Số từ mới trong cuộc gọi: nhấp nháy khi có từ mới ---------- */
+.voice-new-words-count.bump { animation: eqBump 0.55s var(--spring); }
+@keyframes eqBump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.voice-status.is-warn { color: var(--warn); }
+
+/* ---------- Camera học từ ---------- */
+.quests-modal-card { max-width: 640px; height: min(88vh, 760px); }
+.quests-tabs { overflow-x: auto; scrollbar-width: none; flex: none; }
+.quests-tabs::-webkit-scrollbar { display: none; }
+.quests-tabs .nb-tab { flex: 1; white-space: nowrap; text-align: center; padding: 12px 10px; }
+.quests-body { padding: 16px 18px 24px; overflow-y: auto; flex: 1; min-height: 0; -webkit-overflow-scrolling: touch; }
+.q-pane { display: flex; flex-direction: column; gap: 12px; }
+.q-intro strong { font-size: 15px; font-weight: 700; color: var(--text-strong); }
+.q-intro p { font-size: 13px; color: var(--text-2); line-height: 1.6; margin: 4px 0 0; }
+.q-preview { display: block; width: 100%; max-height: 190px; object-fit: cover; border-radius: 14px; border: 1px solid var(--border); margin-bottom: 10px; }
+.q-sub { font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+
+.q-target { display: flex; gap: 14px; align-items: flex-start; padding: 12px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-elev); }
+.q-target.done { border-color: rgba(59, 130, 246, 0.45); background: rgba(59, 130, 246, 0.08); }
+.q-target.active { border-color: var(--accent); }
+.q-letter { width: 48px; height: 48px; border-radius: 14px; background: var(--gradient-primary); color: #fff; font-size: 26px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: none; }
+.q-target.done .q-letter { background: var(--track); color: var(--text-2); }
+.q-target-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.q-target-info strong { font-size: 14.5px; line-height: 1.4; color: var(--text-strong); }
+.q-target-actions, .q-capture { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.q-btn { padding: 10px 16px; font-size: 14px; }
+.q-btn:disabled, .q-icon-btn:disabled { opacity: 0.55; cursor: default; transform: none; }
+.q-btn-sm { padding: 7px 12px; font-size: 13px; border-radius: 12px; }
+.q-icon-btn { width: 36px; height: 36px; flex: none; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-elev); color: var(--text); font-size: 15px; display: inline-flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.2s var(--spring); }
+.q-icon-btn:hover:not(:disabled) { background: var(--hover-strong); }
+.q-icon-btn.saved { color: var(--ok-text); border-color: rgba(59, 130, 246, 0.45); }
+
+.q-word { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-elev); }
+.q-word-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.q-word-main strong { font-size: 16px; color: var(--text-strong); }
+.q-ipa { font-size: 13px; color: var(--text-3); }
+.q-meaning { font-size: 14px; color: var(--text); }
+.q-example { font-size: 12.5px; color: var(--text-2); font-style: italic; }
+
+.q-result { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg-elev); }
+.q-result p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--text); }
+.q-result.ok { border-color: rgba(59, 130, 246, 0.5); background: rgba(59, 130, 246, 0.09); }
+.q-result.miss { border-color: rgba(245, 158, 11, 0.5); }
+.q-result.err { border-color: rgba(239, 68, 68, 0.5); }
+.q-result.err p { color: var(--danger-text); }
+.q-score { font-size: 22px; font-weight: 800; color: var(--text-strong); }
+
+.q-loading { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: var(--bg-elev); border: 1px solid var(--border); font-size: 14px; color: var(--text-2); }
+.q-spinner { width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--track); border-top-color: var(--accent); animation: qSpin 0.8s linear infinite; flex: none; }
+@keyframes qSpin { to { transform: rotate(360deg); } }
+
+.q-progress { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.q-quiz { display: flex; flex-direction: column; gap: 4px; }
+.q-question { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.45; color: var(--text-strong); }
+.q-answer-row { display: flex; gap: 8px; }
+.q-input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 14px; background: var(--bg-elev); border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 16px; }
+.q-input:focus { outline: none; border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12); }
+
+.q-webcam { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; background: #000; border-radius: inherit; }
+.q-webcam-video { flex: 1; min-height: 0; width: 100%; object-fit: cover; }
+.q-webcam-actions { display: flex; gap: 10px; justify-content: center; padding: 14px; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); background: rgba(0, 0, 0, 0.7); }
+
+@media (max-width: 600px) {
+  .quests-modal-card { height: 92vh; }
+  .quests-body { padding: 14px 14px 22px; }
+  .q-btn { flex: 1 1 auto; }
+  .q-target-actions .q-btn { flex: 0 1 auto; }
+}
+
+/* ---------- Game Đoán chữ theo hình ---------- */
+.hg-pic {
+  font-size: 88px;
+  line-height: 1.1;
+  text-align: center;
+  padding: 14px 10px;
+  margin: 4px auto 6px;
+  max-width: 220px;
+  width: 100%;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  user-select: none;
+}
+.hg-vi { display: block; margin-top: 4px; font-size: 14px; color: var(--text-2); }
+.hg-vi b { color: var(--ok-text); font-size: 16px; }
+@media (max-width: 480px) { .hg-pic { font-size: 72px; max-width: 180px; } }

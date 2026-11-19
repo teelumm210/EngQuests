@@ -12,6 +12,7 @@
     "build": "echo 'No build step needed'"
   },
   "dependencies": {
-    "@google/genai": "^2.29.1"
+    "@google/genai": "^2.29.1",
+    "@netlify/blobs": "^11.1.9"
   }
 }

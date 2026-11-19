@@ -12,6 +12,10 @@ import { createPracticeCard, buildResultMessage, speak, abortActivePractice } fr
 import { Settings } from "./settings.js";
 import { VocaChat } from "./chat.js";
 import { createGames } from "./games.js";
+import { initIcons, liveCallBlocker, speechBlocker, speechErrorMessage, mediaErrorMessage, showNotice } from "./compat.js";
+import { classifyConfirm } from "./voice-commands.js";
+import { createAccounts } from "./accounts.js";
+import { createQuests } from "./quests.js";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -276,6 +280,16 @@ function triggerFloatingXP(amount, element) {
 // ============================================
 //  Markdown (nhẹ)
 // ============================================
+/** Ăn mừng nhỏ (big=false: chỉ âm thanh) dùng cho camera học từ */
+function celebrate(big = true) {
+  playSuccessChime();
+  if (big) triggerConfetti();
+}
+
+let accounts = null;
+let quests = null;
+let micUnavailable = false; // cuộc gọi đang mở nhưng không dùng được micro
+
 function parseMarkdown(text) {
   if (!text) return "";
   let html = text
@@ -661,6 +675,11 @@ function setVoiceState(next) {
 }
 
 function renderStatus() {
+  voiceStatus.classList.toggle("is-warn", micUnavailable && voiceState !== "connecting");
+  if (micUnavailable && voiceState !== "connecting") {
+    voiceStatus.textContent = voiceState === "speaking" ? "EngQuests đang nói · Micro không dùng được" : "Micro không dùng được · bạn vẫn nhắn chữ được";
+    return;
+  }
   if (state.muted && voiceState !== "connecting") {
     voiceStatus.textContent = voiceState === "speaking" ? "EngQuests đang nói · Mic đã tắt" : "Mic đã tắt";
   } else {
@@ -843,7 +862,15 @@ function confirmAddLiveVocab(args = null, { notifyAi = true } = {}) {
 function updateVoiceDiscoveredWordsUI() {
   const count = discoveredWordsInCall.length;
   if (voiceNewWordsVal) {
-    voiceNewWordsVal.textContent = `${count} từ mới`;
+    const prev = voiceNewWordsVal.textContent;
+    const saved = discoveredWordsInCall.filter((w) => w.saved).length;
+    const next = saved ? `${count} từ mới · ${saved} đã lưu` : `${count} từ mới`;
+    voiceNewWordsVal.textContent = next;
+    if (prev !== next && btnToggleVocabPanel) {
+      btnToggleVocabPanel.classList.remove("bump");
+      void btnToggleVocabPanel.offsetWidth;
+      btnToggleVocabPanel.classList.add("bump");
+    }
   }
   if (btnToggleVocabPanel) {
     btnToggleVocabPanel.classList.toggle("has-words", count > 0);
@@ -1001,7 +1028,8 @@ function analyzeAiSpeechForVocabAndScore(text) {
   // Mẫu: 'từ "resilient" nghĩa là...', '"resilient" có nghĩa là...'
   // Bắt buộc từ nằm trong dấu ngoặc kép hoặc in đậm để tránh bắt nhầm câu thường
   const vocabPattern = /["“*]([A-Za-z][A-Za-z'-]{2,24})["”*]\s*(?:có\s+)?(?:nghĩa\s+là|nghĩa|tức\s+là|là)\s*[:]?\s*([^.,!?\n]{2,60})/i;
-  const vMatch = text.match(vocabPattern);
+  const enPattern = /(?:the word\s+)?["“*']?([A-Za-z][A-Za-z'-]{2,24})["”*']?\s+(?:means|is defined as|refers to|stands for)\s+([^.!?\n]{2,80})/i;
+  const vMatch = text.match(vocabPattern) || (/(?:the word|word)\s+["“*']|["“*][A-Za-z'-]+["”*]\s+(?:means|refers to)/i.test(text) ? text.match(enPattern) : null);
   if (vMatch) {
     const word = vMatch[1].toLowerCase().trim();
     const meaning = vMatch[2].trim();
@@ -1018,21 +1046,12 @@ function analyzeAiSpeechForVocabAndScore(text) {
   }
 }
 
-// --- Xử lý khi người dùng nói để tự động thêm từ ---
+// --- Xử lý khi người dùng nói để tự động thêm từ (Có / Lưu đi / Yes / Save it ...) ---
 function analyzeUserSpeechForAction(userText) {
   if (!userText || !currentLiveVocab || currentLiveVocab.saved) return;
-  const lower = userText.toLowerCase().trim();
-
-  if (/^(không|khong|ko|no|nope|thôi|thoi|đừng|dung|bỏ qua|bo qua)(?![\p{L}\p{N}])/iu.test(lower)) {
-    hideLiveVocabCard();
-    return;
-  }
-
-  // Kiểm tra ý định đồng ý lưu từ
-  const acceptPatterns = /^(có|co|ừ|u|lưu đi|luu di|thêm đi|them di|lưu vào|them vao|yes|yeah|yep|ok|oke|okay|lưu|them|được|dong y|đồng ý|save|save it|add)\b/i;
-  if (acceptPatterns.test(lower) || lower.includes("lưu từ") || lower.includes("thêm từ") || lower === "có" || lower === "yes" || lower === "lưu") {
-    confirmAddLiveVocab();
-  }
+  const verdict = classifyConfirm(userText);
+  if (verdict === "no") hideLiveVocabCard();
+  else if (verdict === "yes") confirmAddLiveVocab();
 }
 
 function openVoiceView() {
@@ -1045,6 +1064,7 @@ function openVoiceView() {
   userSpokeThisTurn = false;
   currentLiveVocab = null;
   discoveredWordsInCall = [];
+  micUnavailable = false;
   aiTurnText = "";
   toolUsedThisTurn = false;
   updateVoiceDiscoveredWordsUI();
@@ -1097,6 +1117,13 @@ function handleCaption(role, text) {
 // ============================================
 async function startLiveCall() {
   if (state.isLiveActive || state.liveClient) return;
+
+  // Trình duyệt không có micro (vd. Zalo/Facebook, HTTP): báo rõ thay vì treo ở "Đang kết nối…"
+  const blocker = liveCallBlocker();
+  if (blocker) {
+    showNotice(blocker);
+    return;
+  }
 
   abortActivePractice();
   state.muted = false;
@@ -1180,6 +1207,11 @@ async function startLiveCall() {
         }
       }
     },
+    onMicError: (err) => {
+      micUnavailable = true;
+      renderStatus();
+      showNotice({ title: "Không dùng được micro", message: mediaErrorMessage(err, "micro") + " Bạn vẫn có thể nhắn chữ trong cuộc gọi.", copyLink: !!getInAppName() });
+    },
     onNotice: (msg) => showToast(msg, "info"),
     onError: (err) => {
       console.error("Live Client Error:", err);
@@ -1187,11 +1219,22 @@ async function startLiveCall() {
     },
   });
 
+  // iOS Safari chỉ cho phát âm thanh nếu AudioContext được mở ngay trong lần chạm của người dùng
+  try {
+    state.liveClient.player.init();
+  } catch {
+    /* sẽ thử lại khi có âm thanh */
+  }
+
   try {
     await state.liveClient.connect();
   } catch (err) {
     cleanupCall();
   }
+}
+
+function getInAppName() {
+  return /Zalo|FBAN|FBAV|FB_IAB|Messenger|Instagram|TikTok|Line\//i.test(navigator.userAgent);
 }
 
 function cleanupCall() {
@@ -1424,10 +1467,7 @@ function newChat() {
 // ============================================
 function initSpeechRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    btnMic.style.display = "none";
-    return;
-  }
+  if (!SR) return; // nút mic vẫn hiện; bấm vào sẽ giải thích vì sao chưa dùng được
 
   const recognition = new SR();
   recognition.lang = "vi-VN";
@@ -1452,7 +1492,8 @@ function initSpeechRecognition() {
 
   recognition.onerror = (event) => {
     console.error("Speech recognition error:", event.error);
-    if (event.error === "not-allowed") showToast("Vui lòng cho phép truy cập microphone", "warning");
+    const msg = speechErrorMessage(event.error);
+    if (msg) showToast(msg, "warning");
     stopRecording();
   };
 
@@ -1472,13 +1513,24 @@ function toggleRecording() {
   if (state.isRecording) {
     state.recognition?.stop();
     stopRecording();
-  } else {
-    try {
-      state.recognition.lang = "vi-VN";
-      state.recognition.start();
-    } catch (e) {
-      showToast("Không thể bắt đầu ghi âm", "error");
-    }
+    return;
+  }
+  const blocker = speechBlocker();
+  if (!state.recognition) {
+    showNotice(blocker || { title: "Nhập bằng giọng nói chưa dùng được", message: "Trình duyệt này không hỗ trợ nhận giọng nói. Bạn có thể gõ chữ hoặc dùng micro trên bàn phím." });
+    return;
+  }
+  // Trình duyệt trong app (Zalo, Facebook...): cảnh báo một lần rồi vẫn cho thử
+  if (blocker && !toggleRecording.warned) {
+    toggleRecording.warned = true;
+    showNotice(blocker);
+    return;
+  }
+  try {
+    state.recognition.lang = "vi-VN";
+    state.recognition.start();
+  } catch (e) {
+    showToast(speechErrorMessage(e?.name === "NotAllowedError" ? "not-allowed" : "other"), "error");
   }
 }
 
@@ -1500,8 +1552,7 @@ async function openCamera() {
     cameraOverlay.style.display = "flex";
   } catch (error) {
     console.error("Camera error:", error);
-    if (error.name === "NotAllowedError") showToast("Vui lòng cho phép truy cập camera", "warning");
-    else showToast("Không thể mở camera", "error");
+    showToast(mediaErrorMessage(error, "camera"), error.name === "NotAllowedError" ? "warning" : "error");
   }
 }
 
@@ -1800,7 +1851,23 @@ function closeAllModals() {
 //  Khởi tạo sự kiện
 // ============================================
 function init() {
+  initIcons();
   Settings.initTheme(syncThemeButton);
+
+  quests = createQuests({ showToast, celebrate, onChange: () => updateBadgeUI() });
+  quests.init();
+  accounts = createAccounts({
+    showToast,
+    // Vừa kéo dữ liệu từ tài khoản về: vẽ lại các màn hình đang hiển thị
+    onApplied: () => {
+      updateBadgeUI();
+      if (modalNotebook.style.display === "flex") renderWordList();
+      quests.refresh();
+    },
+  });
+  accounts.init();
+  $("#chip-quests")?.addEventListener("click", () => quests.open("hunt"));
+  window.addEventListener("voca-data-changed", () => updateBadgeUI());
   btnTheme.addEventListener("click", () => syncThemeButton(Settings.toggleTheme()));
 
   btnSettings.addEventListener("click", openSettings);
@@ -1880,6 +1947,7 @@ function init() {
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     const modalOpen = [modalNotebook, modalStats, modalSettings, modalGames].some((m) => m.style.display === "flex");
+    if (quests?.isOpen()) return quests.close();
     if (modalOpen) closeAllModals();
     else if (cameraOverlay.style.display !== "none") closeCamera();
     else if (voiceView.classList.contains("open")) endLiveCall();

@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0&display=block" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%232563eb'/></svg>">
 </head>
@@ -63,12 +63,18 @@
         </button>
 
         <button class="tool-btn tool-pill" id="btn-open-notebook" title="Sổ tay từ vựng">
-          <span class="material-symbols-rounded tool-icon-mat">book_2</span>
+          <span class="material-symbols-rounded tool-icon-mat">menu_book</span>
           <span class="tool-text">Sổ từ (<span id="notebook-count">0</span>)</span>
         </button>
       </div>
 
       <div class="header-actions">
+        <button class="btn-icon btn-account" id="btn-account" title="Đăng nhập để lưu tiến trình" aria-label="Tài khoản">
+          <svg class="ico-user" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+          <span class="account-initial" id="account-label" aria-hidden="true"></span>
+        </button>
         <button class="btn-icon" id="btn-theme" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện sáng/tối">
           <svg class="ico-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
@@ -181,6 +187,12 @@
             </span>
             <span class="chip-label">Mô tả đồ vật để đoán từ</span>
           </button>
+          <button class="chip chip-secondary" id="chip-quests">
+            <span class="chip-icon-wrap chip-icon-gradient-cam">
+              <span class="material-symbols-rounded">photo_camera</span>
+            </span>
+            <span class="chip-label">Săn từ, quét cảnh, dịch menu</span>
+          </button>
           <button class="chip chip-feature" id="chip-games">
             <span class="chip-icon-wrap chip-icon-gradient-game">
               <span class="material-symbols-rounded">sports_esports</span>
@@ -269,6 +281,84 @@
       </div>
     </div>
 
+    <!-- Modal Tài khoản -->
+    <div class="modal-overlay" id="modal-account" style="display: none;">
+      <div class="modal-card modal-card-modern account-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-badge-icon">👤</span>
+            <div>
+              <h3 id="account-title">Tài khoản EngQuests</h3>
+              <p>Lưu tiến trình, dùng được trên mọi thiết bị</p>
+            </div>
+          </div>
+          <button class="btn-icon btn-modal-close" id="btn-close-account" aria-label="Đóng">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+
+        <div class="settings-body" id="account-view-guest">
+          <div class="notebook-tabs account-tabs" role="tablist">
+            <button class="nb-tab active" id="acc-tab-login" type="button" role="tab" aria-selected="true">Đăng nhập</button>
+            <button class="nb-tab" id="acc-tab-register" type="button" role="tab" aria-selected="false">Tạo tài khoản</button>
+          </div>
+          <form id="account-form" class="account-form" novalidate>
+            <div class="field">
+              <label for="acc-username">Tên đăng nhập</label>
+              <input id="acc-username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="24" placeholder="vd: lan.nguyen">
+            </div>
+            <div class="field">
+              <label for="acc-password">Mật khẩu</label>
+              <input id="acc-password" type="password" autocomplete="current-password" maxlength="72" placeholder="Ít nhất 6 ký tự">
+            </div>
+            <label class="acc-show"><input type="checkbox" id="acc-show-pass"> Hiện mật khẩu</label>
+            <p class="acc-error" id="acc-error" role="alert" hidden></p>
+            <button class="btn-primary" id="acc-submit" type="submit">Đăng nhập</button>
+            <p class="field-hint">Dữ liệu học đang có trên máy này sẽ được giữ và gộp vào tài khoản. Tài khoản không cần email nên không thể khôi phục mật khẩu, hãy nhớ mật khẩu của bạn.</p>
+          </form>
+        </div>
+
+        <div class="settings-body" id="account-view-user" hidden>
+          <div class="acc-user-card">
+            <div class="acc-avatar" aria-hidden="true">✓</div>
+            <div>
+              <strong id="acc-user-name">—</strong>
+              <p class="acc-sync" id="acc-sync-status" role="status">Chưa đồng bộ</p>
+            </div>
+          </div>
+          <p class="field-hint">Từ vựng, XP, streak, điểm game và nhiệm vụ camera được lưu theo tài khoản và tự đồng bộ sau mỗi thay đổi.</p>
+          <div class="settings-actions">
+            <button class="btn-primary" id="acc-sync-now" type="button">Đồng bộ ngay</button>
+            <button class="btn-secondary danger" id="acc-logout" type="button">Đăng xuất</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Camera học từ: Săn từ / Quét khung cảnh / Dịch menu -->
+    <div class="modal-overlay" id="modal-quests" style="display: none;">
+      <div class="modal-card quests-modal-card modal-card-modern" role="dialog" aria-modal="true" aria-labelledby="quests-title">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-badge-icon">📸</span>
+            <div>
+              <h3 id="quests-title">Camera học từ</h3>
+              <p>Chụp ảnh đời thật để học và nhận XP</p>
+            </div>
+          </div>
+          <button class="btn-icon btn-modal-close" id="btn-close-quests" aria-label="Đóng">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="notebook-tabs quests-tabs" role="tablist">
+          <button class="nb-tab active" type="button" role="tab" data-qtab="hunt">🎯 Săn từ</button>
+          <button class="nb-tab" type="button" role="tab" data-qtab="scene">🏠 Khung cảnh</button>
+          <button class="nb-tab" type="button" role="tab" data-qtab="menu">🍽️ Menu &amp; biển</button>
+        </div>
+        <div class="quests-body" id="quests-body"></div>
+      </div>
+    </div>
+
     <!-- Modal Trò chơi học tiếng Anh -->
     <div class="modal-overlay" id="modal-games" style="display: none;">
       <div class="modal-card games-modal-card modal-card-modern" role="dialog" aria-modal="true" aria-labelledby="games-title">
@@ -294,7 +384,7 @@
         <div class="modal-header">
           <div class="modal-title-group">
             <span class="modal-badge-icon modal-badge-notebook">
-              <span class="material-symbols-rounded">book_2</span>
+              <span class="material-symbols-rounded">menu_book</span>
             </span>
             <div>
               <h3>Flashcard của bạn</h3>
@@ -489,7 +579,7 @@
           </div>
           <button class="voice-new-words-count" id="btn-toggle-vocab-panel" aria-label="Từ mới phát hiện" title="Xem danh sách từ mới">
             <span class="material-symbols-rounded">translate</span>
-            <span class="voice-new-words-value" id="voice-new-words-value">0 từ mới</span>
+            <span class="voice-new-words-value" id="voice-new-words-value" aria-live="polite">0 từ mới</span>
           </button>
           <button class="vflip" id="btn-live-flip" title="Đổi camera trước/sau" aria-label="Đổi camera trước/sau" hidden>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -531,7 +621,7 @@
             <span class="vvc-btn-icon">➕</span>
             <span class="vvc-btn-text">Thêm vào Flashcard</span>
           </button>
-          <span class="vvc-voice-hint">🎙️ Nói <b>"Lưu đi"</b> hoặc <b>"Có"</b></span>
+          <span class="vvc-voice-hint">🎙️ Nói <b>"Save it"</b> / <b>"Yes"</b> hoặc <b>"Lưu đi"</b> / <b>"Có"</b></span>
         </div>
       </div>
 

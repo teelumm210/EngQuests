@@ -236,9 +236,38 @@ function startDino(api, mode) {
     controls.innerHTML = `
       <input class="gx-input" type="text" inputmode="text" enterkeyhint="done" autocomplete="off"
         autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Gõ từ trên xương rồng…"
-        aria-label="Gõ từ tiếng Anh" disabled>`;
+        aria-label="Gõ từ tiếng Anh">`;
     input = controls.querySelector(".gx-input");
   }
+
+  // Bàn phím điện thoại (Gboard...) đôi khi giữ lại chữ cũ sau khi xoá ô nhập, nên chỉ xét phần đuôi
+  // có độ dài bằng từ cần gõ: "xcat" vẫn tính là đã gõ "cat".
+  const tail = (typed, word) => {
+    const t = norm(typed).replace(/ /g, "");
+    const w = norm(word).replace(/ /g, "");
+    return t.length > w.length ? t.slice(-w.length) : t;
+  };
+  const typedOk = (typed, word) => tail(typed, word) === norm(word).replace(/ /g, "");
+
+  // Giữ con trỏ trong ô nhập suốt ván để không phải chạm lại (và bàn phím điện thoại không bị đóng)
+  const focusInput = () => {
+    if (!input || over) return;
+    try {
+      if (document.activeElement !== input) input.focus({ preventScroll: true });
+    } catch {
+      /* bỏ qua */
+    }
+  };
+  // Khi bàn phím mở, kéo khung game lên để vẫn nhìn thấy khủng long
+  const keepStageVisible = () => {
+    setTimeout(() => {
+      try {
+        stage.scrollIntoView({ block: "nearest", behavior: "auto" });
+      } catch {
+        /* bỏ qua */
+      }
+    }, 250);
+  };
 
   const showWord = (typed = "") => {
     if (!cactus) {
@@ -246,7 +275,7 @@ function startDino(api, mode) {
       viEl.textContent = "";
       return;
     }
-    wordEl.innerHTML = speakMode ? esc(cactus.word.en) : renderTyped(cactus.word.en, typed);
+    wordEl.innerHTML = speakMode ? esc(cactus.word.en) : renderTyped(cactus.word.en, tail(typed, cactus.word.en));
     viEl.textContent = cactus.word.vi;
   };
 
@@ -260,7 +289,10 @@ function startDino(api, mode) {
     cactus.armed = true;
     if (!speakMode) say(cactus.word.en);
     setMsg("Chuẩn rồi! Khủng long sẽ tự nhảy khi tới gần xương rồng.", "ok");
-    if (input) input.value = "";
+    if (input) {
+      input.value = "";
+      focusInput();
+    }
   }
 
   if (input) {
@@ -268,57 +300,71 @@ function startDino(api, mode) {
       if (!cactus || cactus.armed || over) return;
       const typed = input.value.trim();
       showWord(typed);
-      if (norm(typed) === norm(cactus.word.en)) arm();
+      if (typedOk(typed, cactus.word.en)) arm();
     });
+    input.addEventListener("focus", keepStageVisible);
+    // Chạm vào khung game (cử chỉ của người dùng) để lấy lại bàn phím nếu lỡ bị tắt
+    stage.addEventListener("pointerdown", () => focusInput());
     input.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
       e.preventDefault();
       if (!cactus || cactus.armed || over) return;
-      if (norm(input.value) === norm(cactus.word.en)) arm();
+      if (typedOk(input.value, cactus.word.en)) arm();
       else setMsg("Chưa đúng, thử lại nhé.", "bad");
     });
   }
 
-  if (micBtn) {
-    micBtn.addEventListener("click", async () => {
-      if (listening || !cactus || cactus.armed || over) return;
-      const target = cactus;
-      const want = norm(target.word.en);
-      listening = true;
-      micBtn.classList.add("is-live");
-      micBtn.textContent = "Đang nghe…";
-      heardEl.textContent = "";
-      try {
-        const alts = await listener.listen({ onInterim: (t) => (heardEl.textContent = t) });
-        if (over || target !== cactus) return;
-        const ok = alts.some((a) => {
-          const tokens = norm(a.text).split(" ").filter(Boolean);
-          return tokens.some((tk) => tk === want || (want.length >= 5 && distance(tk, want) <= 1));
-        });
-        if (ok) {
-          heardEl.textContent = "";
-          arm();
-        } else {
-          const heard = norm(alts[0]?.text || "");
-          heardEl.textContent = heard ? `Nghe được: "${heard}". Thử lại nhé.` : "Chưa nghe rõ, thử lại nhé.";
-        }
-      } catch (err) {
-        const code = err?.code;
-        heardEl.textContent =
-          code === "not-allowed"
-            ? "Hãy cho phép trang web dùng micro rồi thử lại."
-            : code === "no-speech"
-              ? "Chưa nghe thấy gì, thử lại nhé."
-              : code === "aborted"
-                ? ""
-                : "Không nhận dạng được, thử lại nhé.";
-      } finally {
-        listening = false;
-        micBtn.classList.remove("is-live");
-        micBtn.textContent = "Nhấn để đọc";
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  // Sau lần bấm micro đầu tiên thành công, các xương rồng sau tự bật nghe, không cần bấm nữa
+  let autoListen = false;
+
+  async function listenOnce(fromAuto = false) {
+    if (listening || !cactus || cactus.armed || over) return;
+    const target = cactus;
+    const want = norm(target.word.en);
+    listening = true;
+    let retry = false;
+    micBtn.classList.add("is-live");
+    micBtn.textContent = "Đang nghe…";
+    heardEl.textContent = "";
+    try {
+      const alts = await listener.listen({ onInterim: (t) => (heardEl.textContent = t) });
+      if (over || target !== cactus) return;
+      if (!isIOS) autoListen = true;
+      const ok = alts.some((a) => {
+        const tokens = norm(a.text).split(" ").filter(Boolean);
+        return tokens.some((tk) => tk === want || (want.length >= 5 && distance(tk, want) <= 1));
+      });
+      if (ok) {
+        heardEl.textContent = "";
+        arm();
+      } else {
+        const heard = norm(alts[0]?.text || "");
+        heardEl.textContent = heard ? `Nghe được: "${heard}". Thử lại nhé.` : "Chưa nghe rõ, thử lại nhé.";
+        retry = true;
       }
-    });
+    } catch (err) {
+      const code = err?.code;
+      if (code === "not-allowed" || code === "audio-capture" || code === "network" || code === "unsupported") autoListen = false;
+      else if (code === "no-speech") retry = true;
+      heardEl.textContent =
+        code === "not-allowed"
+          ? "Hãy cho phép trang web dùng micro rồi thử lại."
+          : code === "no-speech"
+            ? "Chưa nghe thấy gì, thử lại nhé."
+            : code === "aborted"
+              ? ""
+              : "Không nhận dạng được, thử lại nhé.";
+    } finally {
+      listening = false;
+      micBtn.classList.remove("is-live");
+      micBtn.textContent = "Nhấn để đọc";
+      // đang tự nghe: nghe lại ngay nếu chưa đọc đúng, không cần bấm
+      if (autoListen && retry && !over && cactus && !cactus.armed) setTimeout(() => listenOnce(true), 300);
+    }
   }
+
+  if (micBtn) micBtn.addEventListener("click", () => listenOnce());
 
   // ---------- Vòng chơi ----------
   function spawn() {
@@ -339,11 +385,12 @@ function startDino(api, mode) {
     setMsg(speakMode ? "Nhấn nút micro và đọc to từ này." : "Gõ từ này thật nhanh.");
     if (input) {
       input.value = "";
-      input.disabled = false;
+      focusInput();
     }
     if (micBtn) {
       micBtn.disabled = false;
       controls.querySelector(".gx-hear").disabled = false;
+      if (autoListen && !listening) listenOnce();
     }
   }
 
@@ -374,8 +421,13 @@ function startDino(api, mode) {
     cactus = null;
     idx++;
     showWord("");
-    if (input) input.disabled = true;
+    if (input) input.value = "";
     if (micBtn) {
+      try {
+        listener.abort();
+      } catch {
+        /* bỏ qua */
+      }
       micBtn.disabled = true;
       controls.querySelector(".gx-hear").disabled = true;
     }
